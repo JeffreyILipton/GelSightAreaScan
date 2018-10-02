@@ -1,4 +1,4 @@
-classdef SensorPCC < handle
+classdef OptitrackSensor < handle
     %SensorPCC Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -13,9 +13,9 @@ classdef SensorPCC < handle
         positionTime
         eulAngles
         thetaDotLPF
+        body
     end
     properties(Access=private)
-        armPCC
         environment
         manager          % handle to parent class
         natNetClientInit
@@ -28,20 +28,12 @@ classdef SensorPCC < handle
     
     methods(Access = public)
         % Constructor
-        function obj = SensorPCC(managerHandle,armPCCHandle,environmentHandle)
+        function obj = OptitrackSensor(managerHandle,BodyHandle)
             %Assign Handles
             obj.manager = managerHandle;
             obj.expType = obj.manager.expType;
-            obj.armPCC = armPCCHandle;
-            if nargin < 3
-                obj.totalNumRigidBodies = obj.armPCC.numOfRigidBodies; 
-                obj.hasEnvironment = false;
-            else
-                obj.environment = environmentHandle;
-                % arm plus one for additional marker of the environment:
-                obj.totalNumRigidBodies = obj.armPCC.numOfRigidBodies+obj.environment.numOfRigidBodies;
-                obj.hasEnvironment = true;
-            end
+            obj.body = BodyHandle;
+            obj.totalNumRigidBodies = 1; 
             
             %thetadot estimator
             obj.filter_cut_off_frequency = obj.manager.setup.filter_cut_off_frequency; %62.83
@@ -49,7 +41,7 @@ classdef SensorPCC < handle
             disp(num2str(obj.manager.framePeriod));
             obj.filter_sample_period  = obj.manager.framePeriod; % 0.0104 approx 1/100, from measurements
             obj.thetaDotLPF = LowPassFilter(obj.filter_cut_off_frequency,...
-                obj.filter_sample_period, obj.armPCC.dims.S);
+                obj.filter_sample_period, 1);
             
             obj.natNetClientInit = false;
             if(obj.expType ~= ExpTypes.Simulation)
@@ -64,7 +56,6 @@ classdef SensorPCC < handle
             end
         end
         function result = start(obj)
-            obj.armPCC.absoluteTime = 0;
             result = 0;
             if(obj.expType == ExpTypes.Simulation)
                 %result = obj.attachSimulationCallback();
@@ -288,37 +279,6 @@ classdef SensorPCC < handle
             end
         end
         
-        function result = attachSimulationCallback(obj)
-            % get fake mocap data
-            % TODO run one time only
-            %obj.manager.sensorMeasurementsDone();
-
-            %ALternative: use timer:
-%             if(isempty(obj.simulationTimer))
-%                 obj.simulationTimer = timer('StartDelay', 1, 'Period', 1, 'TasksToExecute', Inf, ...
-%                     'ExecutionMode', 'fixedRate');
-%                 
-%                 obj.simulationTimer.TimerFcn = {@(src,event)simulationCallback(obj,src,event)};
-%                 start(obj.simulationTimer);
-%                 
-%                 disp('[SensorPCC] SimulationTimer added.');
-%             else
-%                 disp('[SensorPCC] SimulationTimer was already added before.');
-%             end
-            result = 0;
-        end
-        
-        
-        function detachSimulationCallback(obj)
-            if(~isempty(obj.simulationTimer))
-                stop(obj.simulationTimer);
-                delete(obj.simulationTimer);
-                obj.simulationTimer = [];
-                disp('[SensorPCC] SimulationTimer deleted.');
-            else
-                disp('[SensorPCC] SimulationTimer  already deleted.');
-            end
-        end
         
         % Test : Process data in a NatNet FrameReady Event listener callback
         function frameReadyCallback(obj,src,event)
@@ -385,101 +345,52 @@ classdef SensorPCC < handle
 %                 obj.totalNumRigidBodies = obj.frameOfData.nRigidBodies;
             end
             
+            
             % debug
             % fprintf('l_frameTime: %0.3f\tFrameID: %d\n',l_frameTime, l_frameID);
             
             try
                 if(l_newFrame)
-                    if(obj.expType == ExpTypes.Simulation || obj.frameOfData.nRigidBodies == obj.totalNumRigidBodies)
+                    if(obj.frameOfData.nRigidBodies == obj.totalNumRigidBodies)
                         % RigidBodyData with properties:
                         % ID,x,y,z,qx,qy,qz,qw,nMarkers,Markers,MeanError,Tracked
                         %obj.positionTime = double(l_frameTime * obj.frameRate);
                         %obj.armPCC.framePeriod = l_calcFrameInc;
                         %obj.armPCC.absoluteTime = obj.armPCC.absoluteTime+l_calcFrameInc;
                         %disp(num2str(obj.armPCC.framePeriod));
-                        
-                        if(obj.expType ~= ExpTypes.Simulation)
-                            i = 1;
-                            % Extract info for arm and gripper
-                            for s = 1:obj.totalNumRigidBodies
-                                %X =  X in OptiTrack
-                                posXVal =double(obj.frameOfData.RigidBodies(s).x);
-                                %Y =  -Z in OptiTrack
-                                posYVal = - double(obj.frameOfData.RigidBodies(s).z);
-                                %Z =  Y in OptiTrack
-                                posZVal = double(obj.frameOfData.RigidBodies(s).y);
-                                rigidBodyData = obj.frameOfData.RigidBodies(s);
 
-                                %rotate frame so z is up and x is along the
-                                %arm
-                                w = double(rigidBodyData.qw);
-                                x = double(rigidBodyData.qx);
-                                z = double(rigidBodyData.qy);
-                                y = double(-rigidBodyData.qz);
-                                %calculate yaw angle:
-                                t3 = +2.0 * (w * z + x * y);
-                                t4 = +1.0 - 2.0 * (y*y + z * z);
-                                angleZ = atan2(t3, t4);
-                                % equivalent to
-                                %[~,~,angleZ] = SensorPCC.quaternion_to_euler_angle(q0,q1,q2,q3);
+                        % Extract info for arm and gripper
+                        for s = 1:obj.totalNumRigidBodies
+                            %X =  X in OptiTrack
+                            posXVal =double(obj.frameOfData.RigidBodies(s).x);
+                            %Y =  -Z in OptiTrack
+                            posYVal = - double(obj.frameOfData.RigidBodies(s).z);
+                            %Z =  Y in OptiTrack
+                            posZVal = double(obj.frameOfData.RigidBodies(s).y);
+                            rigidBodyData = obj.frameOfData.RigidBodies(s);
 
-                                % CHANGE BELOW!
-                                if (s >= 1 && s <= obj.armPCC.dims.S + 1)
-                                    obj.armPCC.segPos2D(1,s) = posXVal;
-                                    obj.armPCC.segPos2D(2,s) = posYVal;
-                                    obj.armPCC.segPos2D(3,s) = posZVal;
-                                    obj.armPCC.thetaMeasAbs(s) = angleZ;
+                            %rotate frame so z is up and x is along the
+                            %arm
+                            w = double(rigidBodyData.qw);
+                            x = double(rigidBodyData.qx);
+                            z = double(rigidBodyData.qy);
+                            y = double(-rigidBodyData.qz);
+                            %calculate yaw angle:
+                            %t3 = +2.0 * (w * z + x * y);
+                            %t4 = +1.0 - 2.0 * (y*y + z * z);
+                            %angleZ = atan2(t3, t4);
+                            % equivalent to
+                            %[~,~,angleZ] = SensorPCC.quaternion_to_euler_angle(q0,q1,q2,q3);
 
-                                elseif(s == obj.armPCC.dims.S + 2)
-                                    % store end effector position to be stored in the environment 
-                                    obj.environment.positionEndEffectorOT(1:2) = obj.armPCC.segPos2D(1:2,obj.armPCC.dims.S + 1);
-                                    % store environment location
-                                    obj.environment.posSineWaveStartOT(1) = posXVal;                                 
-                                    obj.environment.posSineWaveStartOT(2) = posYVal;
-                                    obj.environment.angleEnvironment = angleZ;
-                                else
-                                    disp('too many rigid bodies defined!!!!!');
-                                end                           
-                            end
-                        else
-                            % SIMULATION
-                            for s = 1:(obj.armPCC.dims.S + 1)
-                                obj.armPCC.segPos2D(1,s)   = obj.frameOfData(3*(s-1) + 1);
-                                obj.armPCC.segPos2D(2,s)   = obj.frameOfData(3*(s-1) + 2);
-                                obj.armPCC.segPos2D(3,s)   = 0;
-                                obj.armPCC.thetaMeasAbs(s) = obj.frameOfData(3*(s-1) + 3);
-                            end
-                            % store end effector position to be stored in the environment 
-                            obj.environment.positionEndEffectorOT(1:2) = [0 0];%obj.armPCC.segPos2D(1:2,obj.armPCC.dims.S + 1);
-                            % store environment location
-                            obj.environment.posSineWaveStartOT(1) = 0;                                 
-                            obj.environment.posSineWaveStartOT(2) = 0;
-                            obj.environment.angleEnvironment = 0;
+                            % CHANGE BELOW!
+                            if (s == 1)
+                                obj.body.v = [posXVal,posYVal,posZVal];
+                                obj.body.q = [w,x,y,z];
+                            else
+                                disp('too many rigid bodies defined!!!!!');
+                            end                           
                         end
-                        %POST PRECESSING ARM - change
-                        % substracting intial frame from 
-                        obj.armPCC.segPos2D = obj.armPCC.segPos2D - repmat(obj.armPCC.segPos2D(:,1),1,obj.armPCC.dims.S + 1);  
-                        %calculate relative end effector position by taking
-                        %last column of the segpos2d
-                        obj.armPCC.xMeas = obj.armPCC.segPos2D(:,obj.armPCC.dims.S + 1);
-                        
-                        %calculate relative angles
-                        obj.armPCC.thetaMeas = diff(obj.armPCC.thetaMeasAbs);
-                        %display last segments orientation
-
-                        %disp(['RelAng:',num2str(obj.armPCC.thetaMeas/pi*180)]);
-                        % Low pass filtered velocity
-                        obj.armPCC.thetaDotMeas = obj.thetaDotLPF.calculate(obj.armPCC.thetaMeas);
-                        %set absolute time and frame period
-                        if obj.expType ~= ExpTypes.Simulation
-                            obj.armPCC.setTimeAndFramePeriod();
-                        else
-                            obj.armPCC.absoluteTime = obj.frameOfData(end-1);
-                        end
-                        % Calibrate Arm and Gripper Values if not already
-                        % done - Ceck for consistency in frames from
-                        % optitrack and the arm being straight at the start
-                        obj.armPCC.calibrateArm();
+                       
                         
                         % Tell Manager that measurements are done
                         obj.armPCC.newSensorValues = true;
@@ -490,13 +401,7 @@ classdef SensorPCC < handle
                         %obj.detachFrameCallback();
                         %%%%%%%%%%%%%%%%%%%%%
                         
-                        if(obj.hasEnvironment && obj.expType ~= ExpTypes.Simulation)
-                            %% POST PROCESSING ENVIRONMENT to find contact directions
-                            obj.environment.calculate();
-                        elseif (obj.hasEnvironment && obj.expType == ExpTypes.Simulation)
-                            obj.environment.setInContact(obj.frameOfData(end));%inContact = obj.frameOfData(end);
-                            obj.environment.setContactDirectionOTNormed([0;1]);
-                        end
+
                         
                     else
                         error('[SensorPCC] We have %i Rigid Bodies, but we need %i!\n',obj.frameOfData.nRigidBodies,obj.totalNumRigidBodies);
@@ -510,26 +415,6 @@ classdef SensorPCC < handle
             
             p_lastFrameTime = l_frameTime;
             p_lastFrameID = l_frameID;
-            
-        end
-        function simulationCallback(obj,src,event)
-            disp('Next Simulation Step!');
-            %obj.positionTime = obj.positionTime+1;
-            %obj.armPCC.framePeriod = double(1/(obj.frameRate));
-            %obj.armPCC.absoluteTime = ?;
-            
-            for i = 1:obj.totalNumRigidBodies
-            %TAKE X position
-            obj.armPCC.segPos2D(1,i) = 0; %TODO fix this value to something reasonable
-            %TAKE Y position
-            obj.armPCC.segPos2D(2,i) = (i-1)*2.47*0.0254; % TODO fix this value
-            end
-            
-            % Update Arm and Gripper Values
-            %obj.armPCC.calculateSegmentValues(); % TODO: look if this ic calculated properly
-            
-            % Tell Manager that measurements are done
-            %obj.manager.sensorMeasurementsDone();
         end
         
     end
