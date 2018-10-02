@@ -1,5 +1,5 @@
 classdef OptitrackSensor < handle
-    %SensorPCC Summary of this class goes here
+    %OptitrackSensor Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
@@ -36,12 +36,12 @@ classdef OptitrackSensor < handle
             obj.totalNumRigidBodies = 1; 
             
             %thetadot estimator
-            obj.filter_cut_off_frequency = obj.manager.setup.filter_cut_off_frequency; %62.83
-            disp('[SensorPCC] Frameperiod used for Low Pass Filter:')
+            %obj.filter_cut_off_frequency = obj.manager.setup.filter_cut_off_frequency; %62.83
+            disp('[OptitrackSensor] Frameperiod used for Low Pass Filter:')
             disp(num2str(obj.manager.framePeriod));
             obj.filter_sample_period  = obj.manager.framePeriod; % 0.0104 approx 1/100, from measurements
-            obj.thetaDotLPF = LowPassFilter(obj.filter_cut_off_frequency,...
-                obj.filter_sample_period, 1);
+            %obj.thetaDotLPF = LowPassFilter(obj.filter_cut_off_frequency,...
+            %    obj.filter_sample_period, 1);
             
             obj.natNetClientInit = false;
             if(obj.expType ~= ExpTypes.Simulation)
@@ -82,7 +82,7 @@ classdef OptitrackSensor < handle
             end
             
             %obj.frameOfData = event.data;
-            %SensorPCC.helperDisplayDots(); %for debugging to display dots
+            %OptitrackSensor.helperDisplayDots(); %for debugging to display dots
             % do some work on that pass...
             obj.extractPositionData();
             
@@ -120,16 +120,17 @@ classdef OptitrackSensor < handle
             % Add NatNet .NET assembly so that Matlab can access its methods, delegates, etc.
             % Note : The NatNetML.DLL assembly depends on NatNet.dll, so make sure they
             % are both in the same folder and/or path if you move them.
-            disp('[SensorPCC] Creating NatNetClient.')
+            disp('[OptitrackSensor] Creating NatNetClient.')
             % TODO : update the path to your NatNetML.DLL file here
             %dllPath = fullfile('c:','NatNetSDK2.5','lib','x64','NatNetML.dll');
             curDir = pwd;
             asmName = 'NatNetML';
-            dllPath = fullfile(curDir,'..','3rd','NatNet_SDK_2.6','lib','x64',[asmName,'.dll']);
+            dllPath = fullfile(curDir,'3rd','NatNet_SDK_2.6','lib','x64',[asmName,'.dll']);
+            disp(curDir)
             % Check that the file exists
             assert(exist(dllPath, 'file') == 2, 'File does not exist');
             
-            assemblyAlreadyExists = SensorPCC.IsAssemblyAdded(asmName);
+            assemblyAlreadyExists = OptitrackSensor.IsAssemblyAdded(asmName);
             if(~assemblyAlreadyExists)
                 NET.addAssembly(dllPath);
             end
@@ -138,21 +139,21 @@ classdef OptitrackSensor < handle
             obj.natNetClient = NatNetML.NatNetClientML(0); % Input = iConnectionType: 0 = Multicast, 1 = Unicast
             
             version = obj.natNetClient.NatNetVersion();
-            fprintf( '[SensorPCC] Client Version : %d.%d.%d.%d\n', version(1), version(2), version(3), version(4) );
+            fprintf( '[OptitrackSensor] Client Version : %d.%d.%d.%d\n', version(1), version(2), version(3), version(4) );
         end
         function destroyNatNetClient(obj)
             if(~isempty(obj.natNetClient))
                 obj.natNetClient.delete();
                 obj.natNetClient = [];
-                disp('[SensorPCC] NatNetClient deleted!')
+                disp('[OptitrackSensor] NatNetClient deleted!')
             else
-                error('[SensorPCC] NatNetClient does not exist!');
+                error('[OptitrackSensor] NatNetClient does not exist!');
             end       
         end
         
         function connectToOptiTrack(obj)
             % Connect to an OptiTrack server (e.g. Motive)
-            disp('[SensorPCC] Connecting to OptiTrack Server (Motive).')
+            disp('[OptitrackSensor] Connecting to OptiTrack Server (Motive).')
             if(~isempty(obj.natNetClient)&& obj.natNetClientInit == false)
                 hst = java.net.InetAddress.getLocalHost;
                 HostIP = char(hst.getHostAddress);
@@ -160,29 +161,29 @@ classdef OptitrackSensor < handle
                 flg = obj.natNetClient.Initialize(HostIP, HostIP); % Flg = returnCode: 0 = Success
                 if (flg == 0)
                     obj.natNetClientInit = true;
-                    disp('[SensorPCC] Connection to Server established')
+                    disp('[OptitrackSensor] Connection to Server established')
                 else
-                    error('[SensorPCC] Connection to Server failed!')
+                    error('[OptitrackSensor] Connection to Server failed!')
                 end
             else
-                error('[SensorPCC] NatNetClient not created yet!')  
+                error('[OptitrackSensor] NatNetClient not created yet!')  
             end
         end
         
         function disconnectFromOptiTrack(obj)
             % Connect to an OptiTrack server (e.g. Motive)
-            disp('[SensorPCC] Disconnecting from OptiTrack Server (Motive).')
+            disp('[OptitrackSensor] Disconnecting from OptiTrack Server (Motive).')
             if(~isempty(obj.natNetClient) && obj.natNetClientInit == true)
                 %Uninitialize natNetClient
                 flg = obj.natNetClient.Uninitialize(); % Flg = returnCode: 0 = Success
                 if (flg == 0)
                     obj.natNetClientInit = false;
-                    disp('[SensorPCC] Succesfully disconnected from NatNetClient.')
+                    disp('[OptitrackSensor] Succesfully disconnected from NatNetClient.')
                 else
-                    error('[SensorPCC] Disconnecting from NatNetClient failed!')
+                    error('[OptitrackSensor] Disconnecting from NatNetClient failed!')
                 end
             else
-                error('[SensorPCC] Already disconnected from NatNetClient.');
+                error('[OptitrackSensor] Already disconnected from NatNetClient.');
             end
         end
         
@@ -191,7 +192,7 @@ classdef OptitrackSensor < handle
             %read data descriptions from nat net client
             dataDescriptions = obj.natNetClient.GetDataDescriptions();
             % print out
-            fprintf('[SensorPCC] Tracking Models : %d\n\n', dataDescriptions.Count);
+            fprintf('[OptitrackSensor] Tracking Models : %d\n\n', dataDescriptions.Count);
             for idx = 1 : dataDescriptions.Count
                 descriptor = dataDescriptions.Item(idx-1);
                 if(descriptor.type == 0)
@@ -237,9 +238,9 @@ classdef OptitrackSensor < handle
             if(retCode == 0)
                 byteArray = uint8(byteArray);
                 obj.frameRate = typecast(byteArray,'single');
-                fprintf('[SensorPCC] FrameRate: %i\n',obj.frameRate);
+                fprintf('[OptitrackSensor] FrameRate: %i\n',obj.frameRate);
             else
-                error('[SensorPCC] FrameRate not detected, Start Motive!\n');
+                error('[OptitrackSensor] FrameRate not detected, Start Motive!\n');
             end
             
         end
@@ -254,12 +255,12 @@ classdef OptitrackSensor < handle
                 if(isempty(obj.frameListener))
                     obj.frameListener = addlistener(obj.natNetClient,...
                         'OnFrameReady2',@(src,event)frameReadyCallback(obj,src,event));
-                    disp('[SensorPCC] FrameReady Listener added.');
+                    disp('[OptitrackSensor] FrameReady Listener added.');
                 else
-                    disp('[SensorPCC] FrameReady Listener was already added before.');
+                    disp('[OptitrackSensor] FrameReady Listener was already added before.');
                 end
             else
-                error('[SensorPCC] NatNet Client is not initialized.');
+                error('[OptitrackSensor] NatNet Client is not initialized.');
                 result = 1;
             end
             
@@ -270,12 +271,12 @@ classdef OptitrackSensor < handle
                 if(~isempty(obj.frameListener))
                     delete(obj.frameListener);
                     obj.frameListener = [];
-                    disp('[SensorPCC] FrameReady Listener deleted.');
+                    disp('[OptitrackSensor] FrameReady Listener deleted.');
                 else
-                    disp('[SensorPCC] FrameReady Listener already deleted.');
+                    disp('[OptitrackSensor] FrameReady Listener already deleted.');
                 end
             else
-                error('[SensorPCC] NatNet Client is not initialized, can not deattach.');
+                error('[OptitrackSensor] NatNet Client is not initialized, can not deattach.');
             end
         end
         
@@ -284,7 +285,7 @@ classdef OptitrackSensor < handle
         function frameReadyCallback(obj,src,event)
             
             obj.frameOfData = event.data;
-            %SensorPCC.helperDisplayDots(); %for debugging to display dots
+            %OptitrackSensor.helperDisplayDots(); %for debugging to display dots
             % do some work on that pass...
             obj.extractPositionData();
         end
@@ -380,7 +381,7 @@ classdef OptitrackSensor < handle
                             %t4 = +1.0 - 2.0 * (y*y + z * z);
                             %angleZ = atan2(t3, t4);
                             % equivalent to
-                            %[~,~,angleZ] = SensorPCC.quaternion_to_euler_angle(q0,q1,q2,q3);
+                            %[~,~,angleZ] = OptitrackSensor.quaternion_to_euler_angle(q0,q1,q2,q3);
 
                             % CHANGE BELOW!
                             if (s == 1)
@@ -393,7 +394,7 @@ classdef OptitrackSensor < handle
                        
                         
                         % Tell Manager that measurements are done
-                        obj.armPCC.newSensorValues = true;
+                        %obj.armPCC.newSensorValues = true;
                         %obj.manager.sensorMeasurementsDone();
                         
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -404,7 +405,7 @@ classdef OptitrackSensor < handle
 
                         
                     else
-                        error('[SensorPCC] We have %i Rigid Bodies, but we need %i!\n',obj.frameOfData.nRigidBodies,obj.totalNumRigidBodies);
+                        error('[OptitrackSensor] We have %i Rigid Bodies, but we need %i!\n',obj.frameOfData.nRigidBodies,obj.totalNumRigidBodies);
                     end
                 end
             catch exc

@@ -45,7 +45,7 @@ classdef Manager < handle
                 
                 S = 1;
                 N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
-                obj.dataLogger = dataLogger(S, N, setup);
+                obj.dataLogger = DataLogger(S, N, setup);
 
                 
             elseif(obj.expType == ExpTypes.GelSightOnly)
@@ -58,7 +58,7 @@ classdef Manager < handle
                 
                 S = 1;
                 N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
-                obj.dataLogger = dataLogger(S, N, setup)
+                obj.dataLogger = DataLogger(S, N, setup)
 
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
@@ -70,7 +70,7 @@ classdef Manager < handle
                 
                 S = 1;
                 N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*1.2); % max data points to log
-                obj.dataLogger = dataLogger(S, N, setup);
+                obj.dataLogger = DataLogger(S, N, setup);
             end            
             
         end
@@ -116,7 +116,7 @@ classdef Manager < handle
         
         function logData(obj)
             % All of the following gets logged
-            p,v = obj.body.getPosition([0,0,0]);
+            [p,v] = obj.body.getPosition([0,0,0]);
             obj.dataLogger.add(p, v);
         end
         % Destructor

@@ -17,11 +17,11 @@ classdef Body < handle
             obj.q = [0,0,0,0];
         end
         
-        function curpos,quat = getPostion(obj);
+        function [curpos,quat] = getPosition(obj,offset)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-           curpos = v+v_offset;
-           quat = q;
+           curpos = obj.v+obj.v_offset+offset;
+           quat = obj.q;
         end
     end
 end
