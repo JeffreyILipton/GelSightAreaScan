@@ -2,28 +2,12 @@
 
 %% Curvature Level Controller
 setup = struct();
-setup.expType = ExpTypes.PhysicalExperiment;
-%setup.expType = ExpTypes.Characterization;
+setup.expType = ExpTypes.OptitrackOnly;
 
 setup.expTimeSeconds = 10; %70
-setup.armDof = 5;
-setup.gripperExists = false;
-setup.amplitude = 10/180*pi;
-setup.numPeriods = 4;
-setup.offset = 10/180*pi;
-setup.profile = '-cos';
-setup.enable_PID = 0;
-setup.kp = 0.05;
-setup.kd = 0;
-setup.ki = 0;
+setup.framePeriod = 1;
+setup.offset = [0,0,0];
 
-
-setup.actuatorActive = true;
-setup.controllerType = ControllerTypes.CurvatureLevelControl;
-
-%setup.controllerTypeInput = CartesianImpedanceControl;
-
-setup.nyquistConstant = 5;
 
 %generate manager object
 manager = Manager(setup);
