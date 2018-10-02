@@ -57,6 +57,7 @@ axes(handles.preview);
 imaqreset;
 %vid = videoinput('winvideo', 1, 'RGB24_960x720');
 vid = videoinput('winvideo', 2, 'RGB24_640x480');
+%vid = videoinput('winvideo', 2, 'RGB24_640x480');
 % choose 2 for computers with built in webcams.
 atobj = getselectedsource(vid);
 set(vid, 'FramesPerTrigger', 1);
