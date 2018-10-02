@@ -55,8 +55,8 @@ function capture_OpeningFcn(hObject, eventdata, handles, varargin)
 % Configure Axes preview
 axes(handles.preview);
 imaqreset;
-vid = videoinput('winvideo', 1, 'RGB24_960x720');
-%vid = videoinput('winvideo', 2, 'RGB24_640x480');
+%vid = videoinput('winvideo', 1, 'RGB24_960x720');
+vid = videoinput('winvideo', 2, 'RGB24_640x480');
 % choose 2 for computers with built in webcams.
 atobj = getselectedsource(vid);
 set(vid, 'FramesPerTrigger', 1);
@@ -220,6 +220,8 @@ while true
         frames = cat(4, frames, f);
         times = [times; time];
         deltas = [deltas; aligned_delta];
+    % Send delta data to another function
+    test(deltas(end));
     end
 
 
@@ -267,7 +269,6 @@ while true
             % Save single press
             [~, xmax] = max(deltas);
             ann.start = ind_edge;
-            % Strongest force of the press
             ann.end = xmax;
             ann.hardness = get(handles.hardness, 'String');
             %ann.x = get(handles.x, 'String');

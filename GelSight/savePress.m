@@ -19,7 +19,7 @@ log.num_images = 0;
 anns.video = ann;
 imgAnns = [];
 if writeImages
-    % Uncomment line 22 if want all images
+    % Uncomment line 23 if want all images
     % for i = ann.start:ann.end
     for i = 1:ann.end % Comment out if you want all images
         % Following if loop is so that we only capture beginning and end
