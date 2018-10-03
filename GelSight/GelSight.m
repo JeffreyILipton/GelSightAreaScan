@@ -16,7 +16,7 @@ classdef GelSight
         maxd
         buffersize
         
-        newDataAvalible
+        newDataAvalible 
         
     end
     
@@ -34,6 +34,7 @@ classdef GelSight
             obj.frames = [];
             obj.times = [];
             obj.deltas=[];
+            obj.newDataAvalible = false;
 
         end
         
