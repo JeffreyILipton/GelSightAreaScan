@@ -41,9 +41,9 @@ classdef GelSight
         function start(obj)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-            atobj = getselectedsource(vid);
-            set(vid, 'FramesPerTrigger', 1);
-            set(vid, 'TriggerRepeat', Inf);
+            atobj = getselectedsource(obj.vid);
+            set(obj.vid, 'FramesPerTrigger', 1);
+            set(obj.vid, 'TriggerRepeat', Inf);
             set(atobj,'Exposure',0);
         end
         
