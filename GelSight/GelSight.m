@@ -74,10 +74,12 @@ classdef GelSight
                     stop(obj.vid);
                 end
             end
-                del_pic = abs(fend(:) - obj.calibrationImage);
-                del_pic(del_pic < 10) = 0;
-                delta = repmat(sum(del_pic), size(time));
+            del_pic = abs(fend(:) - obj.calibrationImage);
+            del_pic(del_pic < 10) = 0;
+            delta = repmat(sum(del_pic), size(time));
             if isempty(obj.frames)
+                obj.frames = f;
+                obj.times = time;
                 obj.deltas = delta;
             elseif ob.stage == 0
                 obj.frames = cat(4, obj.frames(:,:,:,max(end-obj.buffersize, 1):end), f);
@@ -105,8 +107,9 @@ classdef GelSight
         
         function stageinput(obj)
             if obj.stage == 0
-                if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6);
+                if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6)
                     obj.stage = 1;
+                    start_time = obj.times(end);
                     obj.newDataAvailable = true;
                 end
             end
@@ -115,7 +118,27 @@ classdef GelSight
                     obj.newDataAvailable = false;
                     obj.thre_mul1 = obj.maxd / obj.init / 8;
                     pause(0.01);
-            
+                    
+                    framerate = mean(1./diff(obj.times));
+                    
+                    [~, xmax] = max(obj.deltas);
+                    ann.end = xmax;
+                    savePress(obj.frames, framerate, ann);
+                    
+                    obj.times = obj.times - start_time;
+
+                    if obj.deltas(end) < obj.init * obj.thre_mul1
+                        obj.stage = 0;
+                        obj.maxd = 0;
+                        obj.calibrationImage = obj.frames(:,:,:,1);
+                        obj.frames = [];
+                        obj.times = [];
+                        obj.deltas = [];
+                        obj.newDataAvailable = false;
+                        flushdata(obj.vid);
+                    end
+                end
+            end  
                     
         end
         
