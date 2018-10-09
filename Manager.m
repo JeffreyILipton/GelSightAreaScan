@@ -16,6 +16,7 @@ classdef Manager < handle
         
         expType          % The type of the experiment
         expTimeSeconds   % The time of the experiment
+        timestep
 
         abort
         setup
@@ -33,7 +34,7 @@ classdef Manager < handle
             obj.abort = false;
             obj.expTimeSeconds = setup.expTimeSeconds;
             obj.framePeriod = setup.framePeriod;
-            
+            obj.timestep = setup.timestep;
             obj.body = Body(setup.offset);
             
             %OptitrackOnly, GelSightOnly,GelSightAndTracking, WithArm
@@ -50,8 +51,10 @@ classdef Manager < handle
                 
             elseif(obj.expType == ExpTypes.GelSightOnly)
                 disp('[Manager] GelSight Only Experiment');
-
+                obj.gelSightSensor = GelSight(setup.camNum);
                 
+
+
             elseif(obj.expType == ExpTypes.GelSightAndTracking)
                 disp('[Manager] GelSight With position tracking Experiment ');
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
@@ -78,27 +81,54 @@ classdef Manager < handle
         
         function start(obj)
             
-            % start optitrack
-            l_result = obj.optitrackSensor.start();
-            if(l_result ==1)
-                disp('[Manager] Error in Sensor occured');
-                obj.stop();
-                obj.delete();
+            
+            if(obj.expType ~= ExpTypes.GelSightOnly)
+                % start optitrack
+                l_result = obj.optitrackSensor.start();
+                if(l_result ==1)
+                    disp('[Manager] Error in Sensor occured');
+                    obj.stop();
+                    obj.delete();
+                end
             end
-           
+            
+            % start gelsight if its used
+            if(obj.expType ~= ExpTypes.OptitrackOnly)
+                obj.gelSightSensor.start();
+                pause(0.1);
+                obj.gelSightSensor.calibrate();
+                disp('Calibrated')
+            end
+            
+            
             tRuntime = tic;
-
             % loop keeping track of the experiment length
             while(toc(tRuntime) < obj.expTimeSeconds && ~obj.abort)
                 oneMeasurement = tic;
 
-                % read from opti track
-                obj.optitrackSensor.getNewData(); % writes into armpcc
-                obj.sensorMeasurementsDone();
-                %end
+                
+                if(obj.expType ~= ExpTypes.GelSightOnly)
+                    % read from opti track
+                    obj.optitrackSensor.getNewData(); % writes into armpcc
+                    obj.sensorMeasurementsDone();
+                end
+                
+                if(obj.expType ~= ExpTypes.OptitrackOnly)
+                    obj.gelSightSensor.getNewData();
+                    if obj.gelSightSensor.stage == 1
+                        disp('PostProcessing');
+                        obj.gelSightSensor.postProcess();
+                    elseif obj.gelSightSensor.stage == 2
+                        disp('clear and restart');
+                        %obj.gelSightSensor.clear();
+                        obj.stop();
+                        obj.delete();
+                    end
+                end
+                
                 timeTaken = toc(oneMeasurement);
 
-                pause(0.01 - timeTaken);
+                pause(obj.timestep - timeTaken);
             end
 
             obj.stop();
@@ -107,7 +137,16 @@ classdef Manager < handle
         
         function stop(obj)
             disp('[Manager] Stopping Manager');
-            obj.optitrackSensor.stop();
+            % stop optitrack if using it
+            if(obj.expType ~= ExpTypes.GelSightOnly)
+                obj.optitrackSensor.stop();
+            end
+            
+            % stop GelSight if using it
+            if(obj.expType ~= ExpTypes.OptitrackOnly)
+                obj.gelSightSensor.stop();
+            end
+            
         end
         
         function sensorMeasurementsDone(obj)
@@ -139,6 +178,13 @@ classdef Manager < handle
             if isobject(obj.optitrackSensor)
                 obj.optitrackSensor.delete();
                 disp('[Manager] Deleted Sensor');
+            end
+            
+            if isobject(obj.gelSightSensor)
+                Sight = obj.gelSightSensor;
+                save("sensor.mat",'Sight');
+                obj.gelSightSensor.delete();
+                disp('[Manager] Saved GelSight Sensor');
             end
 
         end

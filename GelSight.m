@@ -57,7 +57,7 @@ classdef GelSight < handle
             im = [];
             avg_num = 2;
             for i = 1:avg_num
-                if isempty(obj.calibrationImage)
+                if isempty(im)
                     im = getsnapshot(obj.vid) / avg_num;
                 else
                     im = im + getsnapshot(obj.vid) / avg_num;
@@ -81,10 +81,10 @@ classdef GelSight < handle
                     obj.frames = f;
                     obj.times = time;
                     obj.deltas = delta;
-                elseif obj.stage == 0
-                    obj.frames = cat(4, obj.frames(:,:,:,max(end-obj.buffersize, 1):end), f);
-                    obj.times = [obj.times(max(end-obj.buffersize, 1):end); time];
-                    obj.deltas = [obj.deltas(max(end-obj.buffersize, 1):end); delta];
+%                 elseif obj.stage == 0
+%                     obj.frames = cat(4, obj.frames(:,:,:,max(end-obj.buffersize, 1):end), f);
+%                     obj.times = [obj.times(max(end-obj.buffersize, 1):end); time];
+%                     obj.deltas = [obj.deltas(max(end-obj.buffersize, 1):end); delta];
                 else
                     obj.frames = cat(4, obj.frames, f);
                     obj.times = [obj.times; time];
@@ -95,6 +95,8 @@ classdef GelSight < handle
                 obj.newDataAvailable = true;
                 disp('deltas: ')
                 delta
+                disp('num deltas: ')
+                length(obj.deltas)
                 disp(['stage: ',num2str(obj.stage)])
             end
         end        
@@ -157,20 +159,40 @@ classdef GelSight < handle
             [~, xmax] = max(obj.deltas);
             
             im = obj.frames(:,:,:,xmax);
+            
             imgname = [name, '.png'];
-            imgful = [folder, '\', 'image', '\', imgname];
-            imwrite(im, imgful);
+            fullfolder = [folder, '\', 'image'];
+            imgful = [fullfolder, '\', imgname];
+            
+            write = true;
+            if 7~= exist(fullfolder)
+                write = mkdir(fullfolder);
+            end
+            if write
+                imwrite(im, imgful);
+            end
         end
         
         function vidname = saveVideo(obj,folder,name)
             framerate = mean(1./diff(obj.times));
             [~, xmax] = max(obj.deltas);
-            vidname = [folder,'\','video\', name, '.avi'];
-            v = VideoWriter(vidname);
-            v.FrameRate = framerate;
-            open(v);
-            writeVideo(v, obj.frames(obj.start_index:xmax));
-            close(v);
+            
+            fullfolder = [folder,'\','video'];
+            vidname = [fullfolder, name, '.avi'];
+            
+            write = true;
+            if 7~= exist(fullfolder)
+                write = mkdir(fullfolder);
+            end
+            if write
+                v = VideoWriter(vidname);
+                v.FrameRate = framerate;
+                open(v);
+                writeVideo(v, obj.frames(obj.start_index:xmax));
+                close(v);
+            end
+            
+
         end
         
         
