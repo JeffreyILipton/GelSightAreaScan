@@ -118,17 +118,22 @@ classdef Manager < handle
                     if obj.gelSightSensor.stage == 1
                         disp('PostProcessing');
                         obj.gelSightSensor.postProcess();
+                        
                     elseif obj.gelSightSensor.stage == 2
                         disp('clear and restart');
                         %obj.gelSightSensor.clear();
-                        obj.stop();
-                        obj.delete();
+                        Sight = obj.gelSightSensor;
+                        save("sensor.mat",'Sight');
+                        break
                     end
                 end
                 
                 timeTaken = toc(oneMeasurement);
+                if timeTaken < obj.timestep
+                    pause(obj.timestep - timeTaken);
+                end
 
-                pause(obj.timestep - timeTaken);
+                
             end
 
             obj.stop();
@@ -181,8 +186,6 @@ classdef Manager < handle
             end
             
             if isobject(obj.gelSightSensor)
-                Sight = obj.gelSightSensor;
-                save("sensor.mat",'Sight');
                 obj.gelSightSensor.delete();
                 disp('[Manager] Saved GelSight Sensor');
             end

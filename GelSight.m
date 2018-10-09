@@ -119,28 +119,30 @@ classdef GelSight < handle
         
         function stageinput(obj)
             if obj.stage == 0
+                % find start of rise
                 if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6)
-                    obj.stage = 1;
+                    %obj.stage = 1;
                     obj.start_index = length(obj.times);
                     obj.newDataAvailable = true;
                 end
-            end
-            if obj.stage == 1
+                
+                %detect fall
                 if obj.deltas(end) < obj.maxd * obj.thre_mul2
                     obj.newDataAvailable = false;
-                    obj.times = obj.times - obj.times(obj.start_index);
                     if obj.deltas(end) < obj.init * obj.thre_mul1
-                        obj.stage = 2;
+                        obj.stage = 1;
                     end
                 end
+                
             end  
-                    
         end
         
         function postProcess(obj)
+            obj.times = obj.times - obj.times(obj.start_index);
             name = datestr(datetime('now'), 'mm-dd-yy_HHMMss');
             folder = 'data'
             savePress(obj,folder,name);
+            obj.stage=2;
         end
         
         
@@ -178,7 +180,7 @@ classdef GelSight < handle
             [~, xmax] = max(obj.deltas);
             
             fullfolder = [folder,'\','video'];
-            vidname = [fullfolder, name, '.avi'];
+            vidname = [fullfolder,'\', name, '.avi'];
             
             write = true;
             if 7~= exist(fullfolder)
@@ -188,7 +190,9 @@ classdef GelSight < handle
                 v = VideoWriter(vidname);
                 v.FrameRate = framerate;
                 open(v);
-                writeVideo(v, obj.frames(obj.start_index:xmax));
+                %Cutframes = obj.frames(:,:,:,obj.start_index:xmax);
+                %writeVideo(v,Cutframes);
+                writeVideo(v,obj.frames);
                 close(v);
             end
             
