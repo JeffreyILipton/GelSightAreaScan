@@ -122,11 +122,13 @@ classdef GelSight < handle
                 % find start of rise
                 if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6)
                     %obj.stage = 1;
+                    % I think there is a problem here with this. I think we
+                    % should look for a different start point threshold
                     obj.start_index = length(obj.times);
                     obj.newDataAvailable = true;
                 end
                 
-                %detect fall
+                %detect fall by half of maxd
                 if obj.deltas(end) < obj.maxd * obj.thre_mul2
                     obj.newDataAvailable = false;
                     if obj.deltas(end) < obj.init * obj.thre_mul1
