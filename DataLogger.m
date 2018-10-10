@@ -13,6 +13,8 @@ classdef DataLogger < handle
         positions
         quaternions
         
+        frames
+        
         framePeriod
         framePeriodAvg
         experimentSetup
@@ -30,7 +32,7 @@ classdef DataLogger < handle
             obj.quaternions = NaN(N,4);
             obj.framePeriod = NaN(N,1);
             obj.experimentSetup = experimentSetup;
-            
+            obj.frames = [];
         end
         
         function add(obj, position, quaternion)
@@ -47,6 +49,16 @@ classdef DataLogger < handle
             %obj.framePeriod(obj.i, :) = framePeriod;
 
         end
+        
+        function addFrame(obj, frame)
+            if isempty(obj.frames)
+                obj.frames = frame;
+            else
+                obj.frames = cat(4, obj.frames, frame);
+            end
+
+        end
+        
         
         function postProcess(obj)
             obj.framePeriodAvg = mean(obj.framePeriod(1:obj.i));

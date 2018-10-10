@@ -137,11 +137,11 @@ classdef GelSight < handle
             end  
         end
         
-        function postProcess(obj)
-            obj.times = obj.times - obj.times(obj.start_index);
-            name = datestr(datetime('now'), 'mm-dd-yy_HHMMss');
-            folder = 'data'
-            savePress(obj,folder,name);
+        function [im,time] = postProcess(obj)
+            %obj.times = obj.times - obj.times(obj.start_index);
+            [~, xmax] = max(obj.deltas); 
+            time = obj.times(xmax);
+            im = obj.frames(:,:,:,xmax);
             obj.stage=2;
         end
         
@@ -157,10 +157,7 @@ classdef GelSight < handle
             obj.stage=0;
         end
         
-        function imgful = savePress(obj,folder,name)
-            [~, xmax] = max(obj.deltas);
-            
-            im = obj.frames(:,:,:,xmax);
+        function imgful = savePress(obj,im,folder,name)
             
             imgname = [name, '.png'];
             fullfolder = [folder, '\', 'image'];
@@ -177,7 +174,7 @@ classdef GelSight < handle
         
         function vidname = saveVideo(obj,folder,name)
             framerate = mean(1./diff(obj.times));
-            [~, xmax] = max(obj.deltas);
+            %[~, xmax] = max(obj.deltas);
             
             fullfolder = [folder,'\','video'];
             vidname = [fullfolder,'\', name, '.avi'];

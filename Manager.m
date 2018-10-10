@@ -117,14 +117,19 @@ classdef Manager < handle
                     obj.gelSightSensor.getNewData();
                     if obj.gelSightSensor.stage == 1
                         disp('PostProcessing');
-                        obj.gelSightSensor.postProcess();
+                        im = obj.gelSightSensor.postProcess();
                         
+
                     elseif obj.gelSightSensor.stage == 2
-                        disp('clear and restart');
-                        %obj.gelSightSensor.clear();
+                        
+                        name = datestr(datetime('now'), 'mm-dd-yy_HHMMss');
+                        %folder = 'data'
+                        %obj.gelSightSensor.savePress(im,folder,name);
                         Sight = obj.gelSightSensor;
-                        save("sensor.mat",'Sight');
-                        break
+                        save([name,".mat"],'Sight');
+                        disp('[Manager] Saved Sensor');
+                        obj.gelSightSensor.clear()
+                        disp('[Manager] clear gelSight');
                     end
                 end
                 
