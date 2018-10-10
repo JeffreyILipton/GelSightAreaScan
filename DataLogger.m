@@ -13,7 +13,10 @@ classdef DataLogger < handle
         positions
         quaternions
         
+        calibration
         frames
+        framePos
+        frameQuat
         
         framePeriod
         framePeriodAvg
@@ -27,12 +30,19 @@ classdef DataLogger < handle
             obj.N = N; %number of time steps
             obj.i = 0;
             
+            obj.calibration = [];
             obj.timestamps = NaN(N,1);            
             obj.positions = NaN(N,3);
             obj.quaternions = NaN(N,4);
             obj.framePeriod = NaN(N,1);
             obj.experimentSetup = experimentSetup;
             obj.frames = [];
+            obj.framePos = [];
+            obj.frameQuat = [];
+        end
+        
+        function setCalibration(obj,calibration)
+            obj.calibration = calibration;
         end
         
         function add(obj, position, quaternion)
@@ -50,11 +60,15 @@ classdef DataLogger < handle
 
         end
         
-        function addFrame(obj, frame)
+        function addFrame(obj, frame, position, quaternion)
             if isempty(obj.frames)
                 obj.frames = frame;
+                obj.framePos = position;
+                obj.frameQuat = quaternion;
             else
                 obj.frames = cat(4, obj.frames, frame);
+                obj.framePos = [obj.framePos; position];
+                obj.frameQuat = [obj.frameQuat; quaternion];
             end
 
         end

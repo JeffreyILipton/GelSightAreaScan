@@ -9,6 +9,8 @@ classdef GelSight < handle
         frames
         times
         deltas
+        positions
+        quaternions
         
         calibrationImage
         thre_mul1
@@ -35,8 +37,8 @@ classdef GelSight < handle
             obj.maxd = [];
             obj.init = [];
             obj.frames = [];
-            obj.times = [];
-            obj.deltas=[];
+            obj.times  = [];
+            obj.deltas = [];
             obj.newDataAvailable = false;
             obj.stage = 0;
             obj.start_index = 0;
@@ -67,7 +69,7 @@ classdef GelSight < handle
             start(obj.vid);
         end
         
-        function getNewData(obj)
+        function getNewData(obj,pos,quat)
             if ~obj.vid.FramesAvailable
                 obj.newDataAvailable = false;
             else
@@ -81,6 +83,8 @@ classdef GelSight < handle
                     obj.frames = f;
                     obj.times = time;
                     obj.deltas = delta;
+                    obj.positions = pos;
+                    obj.quaternions = quat;
 %                 elseif obj.stage == 0
 %                     obj.frames = cat(4, obj.frames(:,:,:,max(end-obj.buffersize, 1):end), f);
 %                     obj.times = [obj.times(max(end-obj.buffersize, 1):end); time];
@@ -89,6 +93,9 @@ classdef GelSight < handle
                     obj.frames = cat(4, obj.frames, f);
                     obj.times = [obj.times; time];
                     obj.deltas = [obj.deltas; delta];
+                    obj.positions = [obj.positions; pos];
+                    obj.quaternions = [obj.quaternions;quat];
+                    
                 end
                 maxdelta(obj);
                 stageinput(obj);
@@ -137,10 +144,11 @@ classdef GelSight < handle
             end  
         end
         
-        function [im,time] = postProcess(obj)
+        function [im,pos,quat] = postProcess(obj)
             %obj.times = obj.times - obj.times(obj.start_index);
             [~, xmax] = max(obj.deltas); 
-            time = obj.times(xmax);
+            pos = obj.positions(xmax);
+            quat = obj.quaternions(xmax);
             im = obj.frames(:,:,:,xmax);
             obj.stage=2;
         end
@@ -152,6 +160,8 @@ classdef GelSight < handle
             obj.frames = [];
             obj.times = [];
             obj.deltas = [];
+            obj.positions = [];
+            obj.quaternions = [];
             obj.newDataAvailable = false;
             flushdata(obj.vid);
             obj.stage=0;
