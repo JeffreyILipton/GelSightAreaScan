@@ -5,8 +5,7 @@ classdef Manager < handle
     properties(Access=public)
         optitrackSensor  % This object interfaces with the Sensor to collect data
         frameRate        % This is the rate at which the optitrack is querried
-        framePeriod      % ?
-        framePeriodSensor% ?
+
         
         gelSightSensor   % This is the object that interfaces with the GelSight
 
@@ -35,37 +34,30 @@ classdef Manager < handle
             end
             obj.abort = false;
             obj.expTimeSeconds = setup.expTimeSeconds;
-            obj.framePeriod = setup.framePeriod;
             obj.timestep = setup.timestep;
             obj.body = Body(setup.offset);
             obj.debug = debug;
+            
+            obj.dataLogger = DataLogger(setup);
+            
+            
             %OptitrackOnly, GelSightOnly,GelSightAndTracking, WithArm
             if(obj.expType == ExpTypes.OptitrackOnly)
                 disp('[Manager] Optitrack Only Experiment');
                 obj.optitrackSensor = OptitrackSensor(obj,obj.body);
+                obj.frameRate = obj.optitrackSensor.frameRate;
                 
-                
-                
-                S = 1;
-                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
-                obj.dataLogger = DataLogger(S, N, setup);
 
                 
             elseif(obj.expType == ExpTypes.GelSightOnly)
                 disp('[Manager] GelSight Only Experiment');
                 obj.gelSightSensor = GelSight(setup.camNum);
-                
-                S = 1;
-                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*1.2); % max data points to log
-                obj.dataLogger = DataLogger(S, N, setup);
 
             elseif(obj.expType == ExpTypes.GelSightAndTracking)
                 disp('[Manager] GelSight With position tracking Experiment ');
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
-                
-                S = 1;
-                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
-                obj.dataLogger = DataLogger(S, N, setup)
+                obj.frameRate = obj.optitrackSensor.frameRate;
+                obj.gelSightSensor = GelSight(setup.camNum);
 
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
@@ -73,11 +65,8 @@ classdef Manager < handle
                 %obj.environment = Environment();
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
-                obj.framePeriodSensor = 1/ obj.frameRate; %update framePeriod
-                
-                S = 1;
-                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*1.2); % max data points to log
-                obj.dataLogger = DataLogger(S, N, setup);
+                obj.gelSightSensor = GelSight(setup.camNum);
+
             end            
             
         end
@@ -102,18 +91,28 @@ classdef Manager < handle
                 pause(0.1);
                 obj.gelSightSensor.calibrate();
                 obj.dataLogger.setCalibration(obj.gelSightSensor.calibrationImage);
-                disp('Calibrated')
+                disp('[Manager] GelSight Calibrated')
             end
             
             
             tRuntime = tic;
             % loop keeping track of the experiment length
-            while(toc(tRuntime) < obj.expTimeSeconds && ~obj.abort)
+            while(~obj.abort)
                 oneMeasurement = tic;
+                
+                %If a time limit is set, check if we should continue
+                if( obj.expTimeSeconds)
+                    if (toc(tRuntime) > obj.expTimeSeconds)
+                        break
+                    end
+                end
+                
+                
 
                 Pos = NaN(1,3);
                 Quat = NaN(1,4);
                 
+                %update Position and Quaternion from sensor
                 if(obj.expType ~= ExpTypes.GelSightOnly)
                     % read from opti track
                     obj.optitrackSensor.getNewData(); % writes into armpcc
@@ -121,6 +120,7 @@ classdef Manager < handle
                     [Pos,Quat] = obj.body.getPosition([0,0,0]);
                 end
                 
+                %run gelsight sensor
                 if(obj.expType ~= ExpTypes.OptitrackOnly)
                     obj.gelSightSensor.getNewData(Pos,Quat);
                     if obj.gelSightSensor.stage == 1
@@ -192,7 +192,7 @@ classdef Manager < handle
                 disp('[Manager] Log Saved');
                 
                 %delete shape history
-                disp('[Manager] Deleting ShapeHistory');
+                disp('[Manager] Deleting History');
                 delete(obj.dataLogger);
             end
             
