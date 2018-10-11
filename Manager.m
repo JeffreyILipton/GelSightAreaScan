@@ -131,6 +131,9 @@ classdef Manager < handle
                         % Looking for rise
                     elseif obj.gelSightSensor.stage == 1
                         %It has risen
+                        if obj.gelSightSensor.deltas(end) > 12000000
+                            % pull back
+                        end
                     elseif obj.gelSightSensor.stage == 2
                         %Pressure falling
                         disp('PostProcessing');
