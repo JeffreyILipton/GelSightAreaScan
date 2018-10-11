@@ -9,7 +9,7 @@ setup.framePeriod = 1;
 setup.offset = [0,0,0];
 setup.camNum=2;
 setup.timestep = 0.01;
-setup.debug = true;
+setup.debug = false;%true;
 
 %generate manager object
 manager = Manager(setup);
