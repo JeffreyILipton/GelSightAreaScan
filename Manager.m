@@ -127,12 +127,18 @@ classdef Manager < handle
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
-                    if obj.gelSightSensor.stage == 1
+                    if obj.gelSightSensor.stage == 0
+                        % Looking for rise
+                    elseif obj.gelSightSensor.stage == 1
+                        %It has risen
+                    elseif obj.gelSightSensor.stage == 2
+                        %Pressure falling
                         disp('PostProcessing');
                         [im,pos,quat] = obj.gelSightSensor.postProcess();
                         obj.dataLogger.addFrame(im,pos,quat);
 
-                    elseif obj.gelSightSensor.stage == 2
+                    elseif obj.gelSightSensor.stage == 3
+                        % done processing
                         if obj.debug
                             %name = datestr(now);%datestr(datetime('now'), 'mm-dd-yy_HHMMss');
                             filename = sprintf('data\\Sight_%s.mat', datestr(now));

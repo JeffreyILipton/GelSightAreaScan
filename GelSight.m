@@ -15,6 +15,7 @@ classdef GelSight < handle
         calibrationImage
         thre_mul1
         thre_mul2
+        trigger_thresh
         maxd
         buffersize
         
@@ -31,6 +32,7 @@ classdef GelSight < handle
             imaqreset;
             obj.vid= videoinput('winvideo', camNum, 'RGB24_640x480');
             
+            obj.trigger_thresh = 12000000;
             obj.thre_mul1 = 3;
             obj.thre_mul2 = 0.5;
             obj.buffersize = 15;
@@ -108,8 +110,8 @@ classdef GelSight < handle
                 obj.newDataAvailable = true;
                 disp('deltas: ')
                 delta
-                disp('num deltas: ')
-                length(obj.deltas)
+                disp(['num deltas: ',num2str( length(obj.deltas) )])
+                
                 disp(['stage: ',num2str(obj.stage)])
             end
         end        
@@ -133,18 +135,25 @@ classdef GelSight < handle
         function stageinput(obj)
             if obj.stage == 0
                 % find start of rise
-                if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6)
+                if (obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6))  
                     %obj.stage = 1;
                     obj.start_index = length(obj.times);
                     obj.newDataAvailable = true;
+                    obj.stage = 1;
                 end
-                
+            end
+            if obj.stage == 1
                 %detect fall
-                if obj.deltas(end) < obj.maxd * obj.thre_mul2
+                if (  (obj.deltas(end) < obj.maxd * obj.thre_mul2) )
                     obj.newDataAvailable = false;
                     if obj.deltas(end) < obj.init * obj.thre_mul1
-                        obj.stage = 1;
+                        obj.stage = 2;
                     end
+                end
+                
+                % detect over threshold
+                if ( (obj.maxd >obj.trigger_thresh) )
+                    obj.stage = 2;
                 end
                 
             end  
@@ -156,7 +165,7 @@ classdef GelSight < handle
             pos = obj.positions(xmax,:);
             quat = obj.quaternions(xmax,:);
             im = obj.frames(:,:,:,xmax);
-            obj.stage=2;
+            obj.stage=3;
         end
         
         
