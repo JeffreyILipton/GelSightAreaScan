@@ -5,7 +5,8 @@ classdef Manager < handle
     properties(Access=public)
         optitrackSensor  % This object interfaces with the Sensor to collect data
         frameRate        % This is the rate at which the optitrack is querried
-
+        framePeriod      % ?
+        framePeriodSensor% ?
         
         gelSightSensor   % This is the object that interfaces with the GelSight
 
@@ -15,11 +16,6 @@ classdef Manager < handle
         
         expType          % The type of the experiment
         expTimeSeconds   % The time of the experiment
-        timestep
-        
-        hsa
-        
-        debug
 
         abort
         setup
@@ -36,30 +32,33 @@ classdef Manager < handle
             end
             obj.abort = false;
             obj.expTimeSeconds = setup.expTimeSeconds;
-            obj.timestep = setup.timestep;
+            obj.framePeriod = setup.framePeriod;
+            
             obj.body = Body(setup.offset);
-            obj.debug = setup.debug;
-            
-            obj.dataLogger = DataLogger(setup);
-            
             
             %OptitrackOnly, GelSightOnly,GelSightAndTracking, WithArm
             if(obj.expType == ExpTypes.OptitrackOnly)
                 disp('[Manager] Optitrack Only Experiment');
                 obj.optitrackSensor = OptitrackSensor(obj,obj.body);
-                obj.frameRate = obj.optitrackSensor.frameRate;
                 
+                
+                
+                S = 1;
+                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
+                obj.dataLogger = DataLogger(S, N, setup);
 
                 
             elseif(obj.expType == ExpTypes.GelSightOnly)
                 disp('[Manager] GelSight Only Experiment');
-                obj.gelSightSensor = GelSight(setup.camNum);
 
+                
             elseif(obj.expType == ExpTypes.GelSightAndTracking)
                 disp('[Manager] GelSight With position tracking Experiment ');
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
-                obj.frameRate = obj.optitrackSensor.frameRate;
-                obj.gelSightSensor = GelSight(setup.camNum);
+                
+                S = 1;
+                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*2); % max data points to log
+                obj.dataLogger = DataLogger(S, N, setup)
 
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
@@ -67,10 +66,11 @@ classdef Manager < handle
                 %obj.environment = Environment();
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
-                obj.gelSightSensor = GelSight(setup.camNum);
+                obj.framePeriodSensor = 1/ obj.frameRate; %update framePeriod
                 
-                obj.hsa = HSA(setup.port,setup.mins,setup.maxs);
-
+                S = 1;
+                N = floor(1/obj.framePeriod*(obj.expTimeSeconds)*1.2); % max data points to log
+                obj.dataLogger = DataLogger(S, N, setup);
             end            
             
         end
@@ -78,91 +78,27 @@ classdef Manager < handle
         
         function start(obj)
             
-            
-            if(isobject(obj.optitrackSensor))
-                % start optitrack
-                l_result = obj.optitrackSensor.start();
-                if(l_result ==1)
-                    disp('[Manager] Error in Sensor occured');
-                    obj.stop();
-                    obj.delete();
-                end
+            % start optitrack
+            l_result = obj.optitrackSensor.start();
+            if(l_result ==1)
+                disp('[Manager] Error in Sensor occured');
+                obj.stop();
+                obj.delete();
             end
-            
-            % start gelsight if its used
-            if(isobject(obj.gelSightSensor))
-                obj.gelSightSensor.start();
-                pause(0.1);
-                obj.gelSightSensor.calibrate();
-                obj.dataLogger.setCalibration(obj.gelSightSensor.calibrationImage);
-                disp('[Manager] GelSight Calibrated')
-            end
-            
-            
+           
             tRuntime = tic;
+
             % loop keeping track of the experiment length
-            while(~obj.abort)
+            while(toc(tRuntime) < obj.expTimeSeconds && ~obj.abort)
                 oneMeasurement = tic;
-                
-                %If a time limit is set, check if we should continue
-                if( obj.expTimeSeconds)
-                    if (toc(tRuntime) > obj.expTimeSeconds)
-                        break
-                    end
-                end
-                
-                
 
-                Pos = NaN(1,3);
-                Quat = NaN(1,4);
-                
-                %update Position and Quaternion from sensor
-                if(isobject(obj.optitrackSensor))
-                    % read from opti track
-                    obj.optitrackSensor.getNewData(); % writes into armpcc
-                    obj.sensorMeasurementsDone();
-                    [Pos,Quat] = obj.body.getPosition([0,0,0]);
-                end
-                
-                %run gelsight sensor
-                if(isobject(obj.gelSightSensor))
-                    obj.gelSightSensor.getNewData(Pos,Quat);
-                    if obj.gelSightSensor.stage == 0
-                        % Looking for rise
-                    elseif obj.gelSightSensor.stage == 1
-                        %It has risen
-                        if obj.gelSightSensor.deltas(end) > 12000000
-                            % pull back
-                        end
-                    elseif obj.gelSightSensor.stage == 2
-                        %Pressure falling
-                        disp('PostProcessing');
-                        [im,pos,quat] = obj.gelSightSensor.postProcess();
-                        obj.dataLogger.addFrame(im,pos,quat);
-
-                    elseif obj.gelSightSensor.stage == 3
-                        % done processing
-                        if obj.debug
-                            %name = datestr(now);%datestr(datetime('now'), 'mm-dd-yy_HHMMss');
-                            filename = sprintf('data\\Sight_%s.mat', datestr(now));
-                            filename = strrep(filename,':','_');
-                            %folder = 'data'
-                            %obj.gelSightSensor.savePress(im,folder,name);
-                            Sight = obj.gelSightSensor;
-                            save(filename,'Sight');
-                            disp('[Manager] Saved Sensor');
-                        end
-                        obj.gelSightSensor.clear()
-                        disp('[Manager] clear gelSight');
-                    end
-                end
-                
+                % read from opti track
+                obj.optitrackSensor.getNewData(); % writes into armpcc
+                obj.sensorMeasurementsDone();
+                %end
                 timeTaken = toc(oneMeasurement);
-                if timeTaken < obj.timestep
-                    pause(obj.timestep - timeTaken);
-                end
 
-                
+                pause(0.01 - timeTaken);
             end
 
             obj.stop();
@@ -171,16 +107,7 @@ classdef Manager < handle
         
         function stop(obj)
             disp('[Manager] Stopping Manager');
-            % stop optitrack if using it
-            if(isobject(obj.optitrackSensor) )
-                obj.optitrackSensor.stop();
-            end
-            
-            % stop GelSight if using it
-            if(isobject(obj.gelSightSensor) )
-                obj.gelSightSensor.stop();
-            end
-            
+            obj.optitrackSensor.stop();
         end
         
         function sensorMeasurementsDone(obj)
@@ -198,34 +125,20 @@ classdef Manager < handle
                 disp('[Manager] Wrap up Logging');
                 % Save the shape history
                 obj.dataLogger.postProcess();
-                filename = sprintf('data\\DataLogger_%s.mat', datestr(now));
+                filename = sprintf('data\\%s.mat', datestr(now));
                 filename = strrep(filename,':','_');
                 History = obj.dataLogger;        %#ok
                 save(filename, 'History');
                 disp('[Manager] Log Saved');
                 
                 %delete shape history
-                disp('[Manager] Deleting History');
+                disp('[Manager] Deleting ShapeHistory');
                 delete(obj.dataLogger);
             end
             
             if isobject(obj.optitrackSensor)
                 obj.optitrackSensor.delete();
                 disp('[Manager] Deleted Sensor');
-            end
-            
-            if isobject(obj.gelSightSensor)
-                if obj.debug
-                    filename = sprintf('data\\Sight_%s.mat', datestr(now));
-                    filename = strrep(filename,':','_');
-                    %folder = 'data'
-                    %obj.gelSightSensor.savePress(im,folder,name);
-                    Sight = obj.gelSightSensor;
-                    save(filename,'Sight');
-                    disp('[Manager] Saved Sensor');
-                end
-                obj.gelSightSensor.delete();
-                disp('[Manager] Deleted GelSight Sensor');
             end
 
         end
