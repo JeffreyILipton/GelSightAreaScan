@@ -17,6 +17,8 @@ classdef Manager < handle
         expTimeSeconds   % The time of the experiment
         timestep
         
+        hsa
+        
         debug
 
         abort
@@ -66,6 +68,8 @@ classdef Manager < handle
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
                 obj.gelSightSensor = GelSight(setup.camNum);
+                
+                obj.hsa = HSA(setup.port,setup.mins,setup.maxs);
 
             end            
             
