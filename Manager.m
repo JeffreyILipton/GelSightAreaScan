@@ -75,7 +75,7 @@ classdef Manager < handle
         function start(obj)
             
             
-            if(obj.expType ~= ExpTypes.GelSightOnly)
+            if(isobject(obj.optitrackSensor))
                 % start optitrack
                 l_result = obj.optitrackSensor.start();
                 if(l_result ==1)
@@ -86,7 +86,7 @@ classdef Manager < handle
             end
             
             % start gelsight if its used
-            if(obj.expType ~= ExpTypes.OptitrackOnly)
+            if(isobject(obj.gelSightSensor))
                 obj.gelSightSensor.start();
                 pause(0.1);
                 obj.gelSightSensor.calibrate();
@@ -113,7 +113,7 @@ classdef Manager < handle
                 Quat = NaN(1,4);
                 
                 %update Position and Quaternion from sensor
-                if(obj.expType ~= ExpTypes.GelSightOnly)
+                if(isobject(obj.optitrackSensor))
                     % read from opti track
                     obj.optitrackSensor.getNewData(); % writes into armpcc
                     obj.sensorMeasurementsDone();
@@ -121,7 +121,7 @@ classdef Manager < handle
                 end
                 
                 %run gelsight sensor
-                if(obj.expType ~= ExpTypes.OptitrackOnly)
+                if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
                     if obj.gelSightSensor.stage == 1
                         disp('PostProcessing');
@@ -159,12 +159,12 @@ classdef Manager < handle
         function stop(obj)
             disp('[Manager] Stopping Manager');
             % stop optitrack if using it
-            if(obj.expType ~= ExpTypes.GelSightOnly)
+            if(isobject(obj.optitrackSensor) )
                 obj.optitrackSensor.stop();
             end
             
             % stop GelSight if using it
-            if(obj.expType ~= ExpTypes.OptitrackOnly)
+            if(isobject(obj.gelSightSensor) )
                 obj.gelSightSensor.stop();
             end
             
