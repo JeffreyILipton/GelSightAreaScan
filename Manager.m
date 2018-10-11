@@ -38,7 +38,7 @@ classdef Manager < handle
             obj.expTimeSeconds = setup.expTimeSeconds;
             obj.timestep = setup.timestep;
             obj.body = Body(setup.offset);
-            obj.debug = debug;
+            obj.debug = setup.debug;
             
             obj.dataLogger = DataLogger(setup);
             

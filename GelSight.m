@@ -156,6 +156,7 @@ classdef GelSight < handle
         
         function clear(obj)
             obj.maxd = 0;
+            obj.init = [];
             obj.calibrationImage = obj.frames(:,:,:,1);
             obj.frames = [];
             obj.times = [];
