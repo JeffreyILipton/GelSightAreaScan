@@ -9,9 +9,13 @@ classdef DataLogger < handle
         N   % Size of samples buffer
         i   % Current index
         
-        timestamps      % Timestamps of the state
         positions
         quaternions
+        
+        calibration
+        frames
+        framePos
+        frameQuat
         
         framePeriod
         framePeriodAvg
@@ -19,34 +23,61 @@ classdef DataLogger < handle
     end
     
     methods
-        function obj = DataLogger (S, N, experimentSetup)
+        function obj = DataLogger (setup)
             % Create the initial object
-            obj.S = S; %number of segments
+            N = (setup.expTimeSeconds)/setup.timestep; % max data points to log
+            if (N==0)
+                N=10/setup.timestep;
+            end
             obj.N = N; %number of time steps
             obj.i = 0;
             
-            obj.timestamps = NaN(N,1);            
+            obj.calibration = [];         
             obj.positions = NaN(N,3);
             obj.quaternions = NaN(N,4);
             obj.framePeriod = NaN(N,1);
-            obj.experimentSetup = experimentSetup;
-            
+            obj.experimentSetup = setup;
+            obj.frames = [];
+            obj.framePos = [];
+            obj.frameQuat = [];
+        end
+        
+        function setCalibration(obj,calibration)
+            obj.calibration = calibration;
         end
         
         function add(obj, position, quaternion)
+            % expand if not enough points
+            if (obj.i+1 > obj.N)           
+                obj.positions = cat(3, obj.timestamps,NaN(obj.N,3));
+                obj.quaternions = cat(4, obj.timestamps,NaN(obj.N,4));
+                obj.N = 2*obj.N;
+            end 
+            
             % Update the count
             obj.i = mod(obj.i + 1, obj.N);
             if obj.i == 0
                 obj.i = obj.N;
             end
             % Add a new measurement
-            %obj.timestamps(obj.i, 1) = timestamp;
-            
             obj.positions(obj.i, :) = position;
             obj.quaternions(obj.i, :) = quaternion;
-            %obj.framePeriod(obj.i, :) = framePeriod;
 
         end
+        
+        function addFrame(obj, frame, position, quaternion)
+            if isempty(obj.frames)
+                obj.frames = frame;
+                obj.framePos = position;
+                obj.frameQuat = quaternion;
+            else
+                obj.frames = cat(4, obj.frames, frame);
+                obj.framePos = [obj.framePos; position];
+                obj.frameQuat = [obj.frameQuat; quaternion];
+            end
+
+        end
+        
         
         function postProcess(obj)
             obj.framePeriodAvg = mean(obj.framePeriod(1:obj.i));
