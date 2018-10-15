@@ -11,6 +11,12 @@ setup.camNum=2;
 setup.timestep = 0.01;
 setup.debug = false;%true;
 
+
+setup.HSA_mins = [1300,1450,1360,1300];
+setup.HSA_maxs = [1140,1600,1200,1500];
+setup.HSA_channels = 0:3;
+setup.HSA_port = 'COM4';
+
 %generate manager object
 manager = Manager(setup);
 
