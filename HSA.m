@@ -7,22 +7,22 @@ classdef HSA < handle
 		device
 		mins
 		maxs
-        
+        channels
     end
     
     methods
-        function obj = HSA(port,mins,maxs)
+        function obj = HSA(port,channels,mins,maxs)
             % Initialize
 			obj.device = 12;
 			
 			obj.mins = mins;
 			obj.maxs = maxs;
-			
+			obj.channels = channels;
 			obj.ser1 = serial(port,...
 				'Baudrate',9600, ...
 				'DataBits',8, ...
 				'Parity','none', ...
-				'InputBufferSize',16384)
+				'InputBufferSize',16384);
 			%set(ser1, 'InputBufferSize', 2048);
 			%set(ser1, 'BaudRate', 9600);
 			%set(ser1, 'DataBits', 8);
@@ -38,7 +38,6 @@ classdef HSA < handle
 		    % Format servo command
 			lower = bin2dec(regexprep(mat2str(fliplr(bitget(6120, 1:7))), '[^\w'']', ''));
 			upper = bin2dec(regexprep(mat2str(fliplr(bitget(servo_setting*4, 8:14))), '[^\w'']', ''));
-			
 			% Advanced Serial Protocol
 			% 0xAA = 170
 			% 4 = action (set target)
@@ -59,9 +58,9 @@ classdef HSA < handle
 		end
 		
 		function setPos(obj,pos)
-			for i=1:len(obj.mins)
+			for i=1:length(obj.mins)
 				val = obj.posToVal(i,pos);
-				obj.write(i,val);
+				obj.write(obj.channels(i),val);
 			end
 		end
 		
