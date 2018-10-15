@@ -2,3 +2,5 @@
 *.asv
 *.avi
 *.png
+*.mat
+*.pyc

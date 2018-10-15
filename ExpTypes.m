@@ -1,5 +1,5 @@
 classdef ExpTypes
    enumeration
-      OptitrackOnly, GelSightOnly, GelSightAndTracking, WithArm,Simulation
+      OptitrackOnly, GelSightOnly, GelSightAndTracking, WithArm, Simulation
    end
 end

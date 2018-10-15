@@ -9,6 +9,8 @@ classdef GelSight < handle
         frames
         times
         deltas
+        positions
+        quaternions
         
         calibrationImage
         thre_mul1
@@ -29,14 +31,15 @@ classdef GelSight < handle
             imaqreset;
             obj.vid= videoinput('winvideo', camNum, 'RGB24_640x480');
             
-            obj.thre_mul1 = 3;
+            
+            obj.thre_mul1 = 4;
             obj.thre_mul2 = 0.5;
             obj.buffersize = 15;
             obj.maxd = [];
             obj.init = [];
             obj.frames = [];
-            obj.times = [];
-            obj.deltas=[];
+            obj.times  = [];
+            obj.deltas = [];
             obj.newDataAvailable = false;
             obj.stage = 0;
             obj.start_index = 0;
@@ -67,7 +70,7 @@ classdef GelSight < handle
             start(obj.vid);
         end
         
-        function getNewData(obj)
+        function getNewData(obj,pos,quat)
             if ~obj.vid.FramesAvailable
                 obj.newDataAvailable = false;
             else
@@ -81,6 +84,12 @@ classdef GelSight < handle
                     obj.frames = f;
                     obj.times = time;
                     obj.deltas = delta;
+                    obj.positions = pos;
+                    obj.quaternions = quat;
+                    for i = 2:length(time)
+                        obj.positions = [obj.positions; pos];
+                        obj.quaternions = [obj.quaternions;quat];
+                    end
 %                 elseif obj.stage == 0
 %                     obj.frames = cat(4, obj.frames(:,:,:,max(end-obj.buffersize, 1):end), f);
 %                     obj.times = [obj.times(max(end-obj.buffersize, 1):end); time];
@@ -89,14 +98,19 @@ classdef GelSight < handle
                     obj.frames = cat(4, obj.frames, f);
                     obj.times = [obj.times; time];
                     obj.deltas = [obj.deltas; delta];
+                    for i = 1:length(time)
+                        obj.positions = [obj.positions; pos];
+                        obj.quaternions = [obj.quaternions;quat];
+                    end
+                    
                 end
                 maxdelta(obj);
                 stageinput(obj);
                 obj.newDataAvailable = true;
                 disp('deltas: ')
                 delta
-                disp('num deltas: ')
-                length(obj.deltas)
+                disp(['num deltas: ',num2str( length(obj.deltas) )])
+                
                 disp(['stage: ',num2str(obj.stage)])
             end
         end        
@@ -120,49 +134,58 @@ classdef GelSight < handle
         function stageinput(obj)
             if obj.stage == 0
                 % find start of rise
-                if obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6)
+                if (obj.deltas(end) > max(obj.init * max(obj.thre_mul1, 2), 1e6))  
                     %obj.stage = 1;
                     % I think there is a problem here with this. I think we
                     % should look for a different start point threshold
                     obj.start_index = length(obj.times);
                     obj.newDataAvailable = true;
+                    obj.stage = 1;
                 end
-                
-                %detect fall by half of maxd
-                if obj.deltas(end) < obj.maxd * obj.thre_mul2
+            end
+            if obj.stage == 1
+                %detect fall
+                if (  (obj.deltas(end) < obj.maxd * obj.thre_mul2) )
                     obj.newDataAvailable = false;
+                    %obj.stage = 2;
                     if obj.deltas(end) < obj.init * obj.thre_mul1
-                        obj.stage = 1;
+                        obj.stage = 2;
                     end
                 end
+                
+%                 % detect over threshold
+%                 if ( (obj.maxd >obj.trigger_thresh) )
+%                     obj.stage = 2;
+%                 end
                 
             end  
         end
         
-        function postProcess(obj)
-            obj.times = obj.times - obj.times(obj.start_index);
-            name = datestr(datetime('now'), 'mm-dd-yy_HHMMss');
-            folder = 'data'
-            savePress(obj,folder,name);
-            obj.stage=2;
+        function [im,pos,quat] = postProcess(obj)
+            %obj.times = obj.times - obj.times(obj.start_index);
+            [~, xmax] = max(obj.deltas); 
+            pos = obj.positions(xmax,:);
+            quat = obj.quaternions(xmax,:);
+            im = obj.frames(:,:,:,xmax);
+            obj.stage=3;
         end
         
         
         function clear(obj)
             obj.maxd = 0;
+            obj.init = [];
             obj.calibrationImage = obj.frames(:,:,:,1);
             obj.frames = [];
             obj.times = [];
             obj.deltas = [];
+            obj.positions = [];
+            obj.quaternions = [];
             obj.newDataAvailable = false;
             flushdata(obj.vid);
             obj.stage=0;
         end
         
-        function imgful = savePress(obj,folder,name)
-            [~, xmax] = max(obj.deltas);
-            
-            im = obj.frames(:,:,:,xmax);
+        function imgful = savePress(obj,im,folder,name)
             
             imgname = [name, '.png'];
             fullfolder = [folder, '\', 'image'];
@@ -179,7 +202,7 @@ classdef GelSight < handle
         
         function vidname = saveVideo(obj,folder,name)
             framerate = mean(1./diff(obj.times));
-            [~, xmax] = max(obj.deltas);
+            %[~, xmax] = max(obj.deltas);
             
             fullfolder = [folder,'\','video'];
             vidname = [fullfolder,'\', name, '.avi'];
