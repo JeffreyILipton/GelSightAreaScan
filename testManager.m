@@ -18,10 +18,10 @@ setup.HSA_maxs = [1140,1600,1200,1500];
 setup.HSA_channels = 0:3;
 setup.HSA_port = 'COM4';
 
-setup.useHardware = false;
+setup.useHardware = true;%false;
 setup.origin = [0.0,0.0,0.0];
-setup.xysize = [10.0,10.0];
-setup.delta = 1.0;
+setup.xysize = [250.0,250.0];
+setup.delta = 10.0;
 %generate manager object
 manager = Manager(setup);
 

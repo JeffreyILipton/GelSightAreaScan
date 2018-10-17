@@ -170,6 +170,8 @@ classdef Manager < handle
                     q = obj.simObj.Joints;
                     msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
                     UR_WaitForMove(obj.hwObj);
+                else
+                    pause(1);
                 end
                 plt_Waypoints = plot3(obj.simObj.Axes,obj.pts(1,:),obj.pts(2,:),obj.pts(3,:),'.m');
                 drawnow
