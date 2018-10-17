@@ -117,9 +117,9 @@ classdef Manager < handle
                 % Create path
                 obj.pts = makeWaypoints(setup.origin,setup.xysize,setup.delta);
                 % Transform coordinates into the workspace of the robot
-                height = 400;
-                outwards = 300;
-                obj.pts = Tz(outwards)*Rx(pi/2)*Tz(height)*obj.pts;
+                height = 000;
+                outwards = 550;
+                obj.pts = Tz(height)*Rx(pi/2)*Tz(outwards)*obj.pts;
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
 
