@@ -19,6 +19,9 @@ classdef Manager < handle
         
         hsa
         
+        arm
+        pts
+        
         debug
 
         abort
@@ -61,6 +64,20 @@ classdef Manager < handle
                 obj.frameRate = obj.optitrackSensor.frameRate;
                 obj.gelSightSensor = GelSight(setup.camNum);
 
+            elseif(obj.expType == ExpTypes.TestHSA)
+                disp('[Manager] Test HSA+Gelsight Experiment');
+
+                %obj.environment = Environment();
+                obj.gelSightSensor = GelSight(setup.camNum);
+                
+                obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
+            
+            elseif(obj.expType == ExpTypes.TestARM)
+                disp('[Manager] Test Arm Experiment');
+                %obj.environment = Environment();
+                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+
+                
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
 
@@ -70,14 +87,9 @@ classdef Manager < handle
                 obj.gelSightSensor = GelSight(setup.camNum);
                 
                 obj.hsa = HSA(setup.HSA_port,setup.HSA_mins,setup.HSA_maxs);
-            elseif(obj.expType == ExpTypes.TestArm)
-                disp('[Manager] Test HSA+Gelsight Experiment');
-
-                %obj.environment = Environment();
-                obj.gelSightSensor = GelSight(setup.camNum);
                 
-                obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
-            end            
+                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+            end     
             
         end
 
@@ -137,6 +149,8 @@ classdef Manager < handle
                     [Pos,Quat] = obj.body.getPosition([0,0,0]);
                 end
                 
+                
+                
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
@@ -181,6 +195,9 @@ classdef Manager < handle
                             pause(1.0);
                         end
                     end
+                    
+                    
+                    
                 end
                 
                 timeTaken = toc(oneMeasurement);
@@ -188,7 +205,7 @@ classdef Manager < handle
                     pause(obj.timestep - timeTaken);
                 end
 
-                
+                if(0==isobject(obj.gelSightSensor))
             end
 
             obj.stop();
