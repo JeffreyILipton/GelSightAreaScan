@@ -19,7 +19,8 @@ classdef Manager < handle
         
         hsa
         
-        arm
+        simObj
+        hwObj
         pts
         
         debug
@@ -67,7 +68,6 @@ classdef Manager < handle
             elseif(obj.expType == ExpTypes.TestHSA)
                 disp('[Manager] Test HSA+Gelsight Experiment');
 
-                %obj.environment = Environment();
                 obj.gelSightSensor = GelSight(setup.camNum);
                 
                 obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
@@ -75,8 +75,49 @@ classdef Manager < handle
             elseif(obj.expType == ExpTypes.TestARM)
                 disp('[Manager] Test Arm Experiment');
                 %obj.environment = Environment();
-                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+                
+                obj.simObj = URsim;
+                obj.simObj.Initialize;
+                    simObj.FrameT = Tz(160);
+    
+                % Hide frames
+                frames = '0123456E';
+                for i = 1:numel(frames)
+                    hideTriad(simObj.(sprintf('hFrame%s',frames(i))));
+                end
+                % Connect to hardware
+                % -> The message to the user *assumes* that you have:
+                %       (1) Properly installed URToolboxScript on the UR controller. See
+                %       the link below for instructions:
+                %       
+                %       https://www.usna.edu/Users/weapsys/kutzer/_Code-Development/UR_Toolbox.php
+                %
+                %       (2) Configure the network card connecting the PC to the UR 
+                %       controller to a static IP of 10.1.1.5
+                %
+                %       (3) Set the UR controller IP to 10.1.1.2
+                if setup.useHardware
+                    instruct = sprintf([...
+                        '\tPython module imported.\n',...
+                        '\tEnter server IP address: 192.168.1.105\n',... 
+                        '\tEnter port: 30002\n',...
+                        '\tEnter number of connections to be made: 1\n',...
+                        '\tServer created.\n',...
+                        '\tBegin onboard controller, then press ENTER.\n',...
+                        '\tConnections established.\n',...
+                        '\tWould you like to create a URX connection as well? y\n',...
+                        '\tEnter URX address: 192.168.1.106\n',... %10.1.1.2
+                        '\tURX connection established.\n']);
+                    fprintf('PLEASE USE THE FOLLOWING RESPONSES:\n\n');
+                    fprintf(2,'%s\n\n',instruct)
 
+                    obj.hwObj = UR;
+                end
+                
+                % Create path
+                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+                % Transform coordinates into the workspace of the robot
+                obj.pts = Tz(500)*Rx(pi/2)*Tz(500)*obj.pts;
                 
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
@@ -123,7 +164,18 @@ classdef Manager < handle
                 pause(1.0);
             end
 
+            if(isobject(obj.simObj))
+                obj.simObj.Home;
+                if(isObject(obj.hwObj))
+                    q = obj.simObj.Joints;
+                    msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
+                    UR_WaitForMove(obj.hwObj);
+                end
+                drawnow
+            end
             
+            ptNum=1;
+            moveNext = true;
             tRuntime = tic;
             % loop keeping track of the experiment length
             while(~obj.abort)
@@ -136,6 +188,11 @@ classdef Manager < handle
                     end
                 end
                 
+                if(isobject(obj.simObj))
+                    if (ptNum>length(obj.pts))
+                        break
+                    end
+                end
                 
 
                 Pos = NaN(1,3);
@@ -149,7 +206,29 @@ classdef Manager < handle
                     [Pos,Quat] = obj.body.getPosition([0,0,0]);
                 end
                 
-                
+                if(isobject(obj.simObj) && moveNext)
+                    % Define pose from waypoint
+                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi/2);
+                    % Set simulation toolpose to waypoint pose
+                    obj.simObj.ToolPose = H_cur;
+                    % Move robot to match simulation
+                    q = obj.simObj.Joints;
+                    if (isobject(obj.hwObj))
+                        % Get joint position from the simulation
+                        q = obj.simObj.Joints;
+                        % Send waypoint to the robot
+                        msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
+                        % Wait for move only on the first waypoint
+
+                        % Wait for the robot to finish executing the move
+                        UR_WaitForMove(obj.hwObj);
+
+                    end
+                    ptNum= ptNum+1;
+                    moveNext = false;
+                    % Allow plot to update
+                    drawnow;
+                end
                 
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
@@ -194,11 +273,16 @@ classdef Manager < handle
                             obj.hsa.setPos(0.0);
                             pause(1.0);
                         end
+                        moveNext= true;
                     end
                     
                     
-                    
+                else
+                    moveNext= true;
                 end
+                
+
+                
                 
                 timeTaken = toc(oneMeasurement);
                 if timeTaken < obj.timestep
@@ -267,6 +351,16 @@ classdef Manager < handle
                 obj.hsa.stop();
                 obj.hsa.delete();
                 disp('[Manager] Deleted HSA');
+            end
+            
+            if(isobject(obj.simObj))
+                obj.simObj.delete();
+                disp('[Manager] Deleted UR sim');
+            end
+            
+            if(isobject(obj.hwObj))
+                obj.hwObj.delete();
+                disp('[Manager] Deleted UR hw');
             end
             
             if isobject(obj.gelSightSensor)
