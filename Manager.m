@@ -117,8 +117,9 @@ classdef Manager < handle
                 % Create path
                 obj.pts = makeWaypoints(setup.origin,setup.xysize,setup.delta);
                 % Transform coordinates into the workspace of the robot
-                obj.pts = Tz(500)*Rx(pi/2)*Tz(500)*obj.pts;
-                
+                height = 400;
+                outwards = 300;
+                obj.pts = Tz(outwards)*Rx(pi/2)*Tz(height)*obj.pts;
             elseif(obj.expType == ExpTypes.WithArm)
                 disp('[Manager] Full Physical Experiment');
 
@@ -211,7 +212,7 @@ classdef Manager < handle
                 
                 if(isobject(obj.simObj) && moveNext)
                     % Define pose from waypoint
-                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi/2);
+                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
                     % Set simulation toolpose to waypoint pose
                     obj.simObj.ToolPose = H_cur;
                     % Move robot to match simulation

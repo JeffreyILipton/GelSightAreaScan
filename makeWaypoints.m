@@ -11,7 +11,7 @@ function pts = makeWaypoints(origin,xysize,delta)
                 y = (ns(2)-j)*delta+origin(2);
             end
             k = (i-1)*ns(2)+(j-1)+1;
-            pts(:,k)=[x,y,origin(3),1];
+            pts(:,k)=[x,origin(3),y,1];
         end
     end
 end
