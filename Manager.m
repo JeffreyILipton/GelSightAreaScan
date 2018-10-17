@@ -72,18 +72,18 @@ classdef Manager < handle
                 
                 obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
             
-            elseif(obj.expType == ExpTypes.TestARM)
+            elseif(obj.expType == ExpTypes.TestArm)
                 disp('[Manager] Test Arm Experiment');
                 %obj.environment = Environment();
                 
                 obj.simObj = URsim;
                 obj.simObj.Initialize;
-                    simObj.FrameT = Tz(160);
+                obj.simObj.FrameT = Tz(160);
     
                 % Hide frames
                 frames = '0123456E';
                 for i = 1:numel(frames)
-                    hideTriad(simObj.(sprintf('hFrame%s',frames(i))));
+                    hideTriad(obj.simObj.(sprintf('hFrame%s',frames(i))));
                 end
                 % Connect to hardware
                 % -> The message to the user *assumes* that you have:
@@ -115,7 +115,7 @@ classdef Manager < handle
                 end
                 
                 % Create path
-                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+                obj.pts = makeWaypoints(setup.origin,setup.xysize,setup.delta);
                 % Transform coordinates into the workspace of the robot
                 obj.pts = Tz(500)*Rx(pi/2)*Tz(500)*obj.pts;
                 
@@ -166,11 +166,12 @@ classdef Manager < handle
 
             if(isobject(obj.simObj))
                 obj.simObj.Home;
-                if(isObject(obj.hwObj))
+                if(isobject(obj.hwObj))
                     q = obj.simObj.Joints;
                     msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
                     UR_WaitForMove(obj.hwObj);
                 end
+                plt_Waypoints = plot3(obj.simObj.Axes,obj.pts(1,:),obj.pts(2,:),obj.pts(3,:),'.m');
                 drawnow
             end
             
@@ -278,6 +279,7 @@ classdef Manager < handle
                     
                     
                 else
+                    pause(0.1);
                     moveNext= true;
                 end
                 
@@ -288,8 +290,6 @@ classdef Manager < handle
                 if timeTaken < obj.timestep
                     pause(obj.timestep - timeTaken);
                 end
-
-                if(0==isobject(obj.gelSightSensor))
             end
 
             obj.stop();
