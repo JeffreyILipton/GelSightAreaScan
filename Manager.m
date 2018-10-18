@@ -72,6 +72,29 @@ classdef Manager < handle
                 
                 obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
             
+                                obj.simObj = URsim;
+                obj.simObj.Initialize;
+                obj.simObj.FrameT = Tz(350);
+    
+                % Hide frames
+                frames = '0123456E';
+                for i = 1:numel(frames)
+                    hideTriad(obj.simObj.(sprintf('hFrame%s',frames(i))));
+                end
+
+                if setup.useHardware
+                      if (isobject(setup.hwObj))
+                          obj.hwObj = setup.hwObj;
+                      end
+                end
+                
+                % Create path
+                obj.pts = makeWaypoints(setup.origin,setup.xysize,setup.delta);
+                % Transform coordinates into the workspace of the robot
+                height = 000;
+                outwards = 550;
+                obj.pts = Tz(height)*Rx(pi/2)*Tz(outwards)*obj.pts;
+                
             elseif(obj.expType == ExpTypes.TestArm)
                 disp('[Manager] Test Arm Experiment');
                 %obj.environment = Environment();
