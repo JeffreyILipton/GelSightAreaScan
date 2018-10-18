@@ -97,21 +97,24 @@ classdef Manager < handle
                 %
                 %       (3) Set the UR controller IP to 10.1.1.2
                 if setup.useHardware
-                    instruct = sprintf([...
-                        '\tPython module imported.\n',...
-                        '\tEnter server IP address: 192.168.1.105\n',... 
-                        '\tEnter port: 30002\n',...
-                        '\tEnter number of connections to be made: 1\n',...
-                        '\tServer created.\n',...
-                        '\tBegin onboard controller, then press ENTER.\n',...
-                        '\tConnections established.\n',...
-                        '\tWould you like to create a URX connection as well? y\n',...
-                        '\tEnter URX address: 192.168.1.106\n',... %10.1.1.2
-                        '\tURX connection established.\n']);
-                    fprintf('PLEASE USE THE FOLLOWING RESPONSES:\n\n');
-                    fprintf(2,'%s\n\n',instruct)
-
-                    obj.hwObj = UR;
+%                     instruct = sprintf([...
+%                         '\tPython module imported.\n',...
+%                         '\tEnter server IP address: 192.168.1.105\n',... 
+%                         '\tEnter port: 30002\n',...
+%                         '\tEnter number of connections to be made: 1\n',...
+%                         '\tServer created.\n',...
+%                         '\tBegin onboard controller, then press ENTER.\n',...
+%                         '\tConnections established.\n',...
+%                         '\tWould you like to create a URX connection as well? y\n',...
+%                         '\tEnter URX address: 192.168.1.106\n',... %10.1.1.2
+%                         '\tURX connection established.\n']);
+%                     fprintf('PLEASE USE THE FOLLOWING RESPONSES:\n\n');
+%                     fprintf(2,'%s\n\n',instruct)
+% 
+%                     obj.hwObj = UR;
+                      if (isobject(setup.hwObj))
+                          obj.hwObj = setup.hwObj;
+                      end
                 end
                 
                 % Create path
@@ -230,6 +233,7 @@ classdef Manager < handle
                         UR_WaitForMove(obj.hwObj);
 
                     end
+                    disp(['Pt:',num2str(ptNum),' of ',num2str(length(obj.pts))]);
                     ptNum= ptNum+1;
                     moveNext = false;
                     % Allow plot to update
@@ -375,10 +379,10 @@ classdef Manager < handle
                 disp('[Manager] Deleted UR sim');
             end
             
-            if(isobject(obj.hwObj))
-                obj.hwObj.delete();
-                disp('[Manager] Deleted UR hw');
-            end
+%             if(isobject(obj.hwObj))
+%                 obj.hwObj.delete();
+%                 disp('[Manager] Deleted UR hw');
+%             end
             
             if isobject(obj.gelSightSensor)
                 if obj.debug
