@@ -201,6 +201,7 @@ classdef Manager < handle
                     q = obj.simObj.Joints;
                     msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
                     UR_WaitForMove(obj.hwObj);
+                    pause(1.0);
                 else
                     pause(1);
                 end
@@ -254,6 +255,7 @@ classdef Manager < handle
 
                         % Wait for the robot to finish executing the move
                         UR_WaitForMove(obj.hwObj);
+                        pause(1.0);
 
                     end
                     disp(['Pt:',num2str(ptNum),' of ',num2str(length(obj.pts))]);
@@ -266,14 +268,24 @@ classdef Manager < handle
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
+%                     if exist('starthsa') && obj.gelSightSensor.stage ~=3
+%                         disp(['STARTHSA: ',num2str(toc(starthsa))])
+%                         if toc(starthsa)>0.1  
+%                             obj.gelSightSensor.stage =2;
+%                             disp('skipping')
+%                             starthsa = tic;
+%                         end
+%                     end
                     if obj.gelSightSensor.stage == 0
                         % Looking for rise
                         if isobject(obj.hsa)
-                            obj.hsa.setPos(1.0);
+                            obj.hsa.setPos(0.6);
                         end
+
                     elseif obj.gelSightSensor.stage == 1
                         %It has risen
-                        if ( (obj.gelSightSensor.deltas(end) > 12000000) || ( mean(diff(obj.gelSightSensor.deltas(end-10:end)))< 10000 ) )
+                        if ( (obj.gelSightSensor.deltas(end) > 12000000) ||...
+                              ( mean(diff(obj.gelSightSensor.deltas(end-10:end)))< 10000 ))
                             % pull back
                             if isobject(obj.hsa)
                                 obj.hsa.setPos(0.0);
