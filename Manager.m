@@ -369,6 +369,7 @@ classdef Manager < handle
         end
         % Destructor
         function delete(obj)
+            obj.stop()
             if isobject(obj.dataLogger)
                 disp('[Manager] Wrap up Logging');
                 % Save the shape history

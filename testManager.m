@@ -3,7 +3,7 @@ clearvars -EXCEPT hwObj
 close all
 clc
 %%
-useHardware = false;
+useHardware = true;
 
 if ~exist('hwObj') && useHardware
     instruct = sprintf([...
@@ -43,9 +43,9 @@ setup.HSA_channels = 0:3;
 setup.HSA_port = 'COM72';
 
 setup.useHardware = useHardware;
-setup.origin = [0.0,0.0,0.0];
-setup.xysize = [250.0,250.0];
-setup.delta = 10.0;
+setup.origin = [0.0,200.0,0.0];
+setup.xysize = [250.0,80.0];
+setup.delta = 25.0;
 if exist('hwObj')
     setup.hwObj = hwObj;
 end

@@ -1,5 +1,5 @@
 function pts = makeWaypoints(origin,xysize,delta)
-    ns = xysize/delta;
+    ns = floor(xysize/delta);
 
     pts = zeros(4,ns(1)*ns(2));
     for i = 1:ns(1)
