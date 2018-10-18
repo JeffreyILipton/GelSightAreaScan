@@ -137,7 +137,7 @@ classdef Manager < handle
 
         
         function start(obj)
-            
+            ptNum=1;
             
             if(isobject(obj.optitrackSensor))
                 % start optitrack
@@ -167,6 +167,10 @@ classdef Manager < handle
 
             if(isobject(obj.simObj))
                 obj.simObj.Home;
+                % Define pose from waypoint
+                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
+                % Set simulation toolpose to waypoint pose
+                obj.simObj.ToolPose = H_cur;
                 if(isobject(obj.hwObj))
                     q = obj.simObj.Joints;
                     msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
@@ -178,7 +182,7 @@ classdef Manager < handle
                 drawnow
             end
             
-            ptNum=1;
+            
             moveNext = true;
             tRuntime = tic;
             % loop keeping track of the experiment length
@@ -215,8 +219,6 @@ classdef Manager < handle
                     H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
                     % Set simulation toolpose to waypoint pose
                     obj.simObj.ToolPose = H_cur;
-                    % Move robot to match simulation
-                    q = obj.simObj.Joints;
                     if (isobject(obj.hwObj))
                         % Get joint position from the simulation
                         q = obj.simObj.Joints;
@@ -314,6 +316,18 @@ classdef Manager < handle
             % stop HSA
             if(isobject(obj.hsa))
                 %obj.hsa.stop();
+            end
+            
+            if (isobject(obj.simObj) && isobject(obj.hwObj))
+                ptNum = 1;
+                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
+                % Set simulation toolpose to waypoint pose
+                obj.simObj.ToolPose = H_cur;
+                if(isobject(obj.hwObj))
+                    q = obj.simObj.Joints;
+                    msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
+                    UR_WaitForMove(obj.hwObj);
+                end 
             end
         end
         
