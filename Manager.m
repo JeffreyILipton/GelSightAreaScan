@@ -268,19 +268,21 @@ classdef Manager < handle
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
-%                     if exist('starthsa') && obj.gelSightSensor.stage ~=3
-%                         disp(['STARTHSA: ',num2str(toc(starthsa))])
-%                         if toc(starthsa)>0.1  
-%                             obj.gelSightSensor.stage =2;
-%                             disp('skipping')
-%                             starthsa = tic;
-%                         end
-%                     end
+                    if exist('starthsa') && obj.gelSightSensor.stage <2
+                        disp(['STARTHSA: ',num2str(toc(starthsa))])
+                        if toc(starthsa)>0.1  
+                            obj.gelSightSensor.stage =3;
+                            disp('skipping')
+                        end
+                    end
                     if obj.gelSightSensor.stage == 0
                         % Looking for rise
                         if isobject(obj.hsa)
                             obj.hsa.setPos(0.6);
                         end
+                        if ~exist('starthsa')
+                            starthsa = tic;
+                        end 
 
                     elseif obj.gelSightSensor.stage == 1
                         %It has risen
@@ -318,6 +320,7 @@ classdef Manager < handle
                             obj.hsa.setPos(0.0);
                             pause(1.0);
                         end
+                        starthsa = tic;
                         moveNext= true;
                     end
                     
