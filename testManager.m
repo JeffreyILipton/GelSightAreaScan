@@ -3,7 +3,7 @@ clearvars -EXCEPT hwObj
 close all
 clc
 %%
-useHardware = false;
+useHardware = true;
 
 if ~exist('hwObj') && useHardware
     instruct = sprintf([...

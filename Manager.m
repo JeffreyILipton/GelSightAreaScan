@@ -78,7 +78,7 @@ classdef Manager < handle
                 
                 obj.simObj = URsim;
                 obj.simObj.Initialize;
-                obj.simObj.FrameT = Tz(160);
+                obj.simObj.FrameT = Tz(350);
     
                 % Hide frames
                 frames = '0123456E';
@@ -171,7 +171,7 @@ classdef Manager < handle
             if(isobject(obj.simObj))
                 obj.simObj.Home;
                 % Define pose from waypoint
-                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
+                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
                 % Set simulation toolpose to waypoint pose
                 obj.simObj.ToolPose = H_cur;
                 if(isobject(obj.hwObj))
@@ -219,7 +219,7 @@ classdef Manager < handle
                 
                 if(isobject(obj.simObj) && moveNext)
                     % Define pose from waypoint
-                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
+                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
                     % Set simulation toolpose to waypoint pose
                     obj.simObj.ToolPose = H_cur;
                     if (isobject(obj.hwObj))
@@ -288,7 +288,7 @@ classdef Manager < handle
                     
                     
                 else
-                    pause(0.1);
+                    pause(0.01);
                     moveNext= true;
                 end
                 
@@ -324,7 +324,7 @@ classdef Manager < handle
             
             if (isobject(obj.simObj) && isobject(obj.hwObj))
                 ptNum = 1;
-                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi);
+                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
                 % Set simulation toolpose to waypoint pose
                 obj.simObj.ToolPose = H_cur;
                 if(isobject(obj.hwObj))
