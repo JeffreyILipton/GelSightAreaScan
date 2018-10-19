@@ -56,7 +56,7 @@ function capture_OpeningFcn(hObject, eventdata, handles, varargin)
 axes(handles.preview);
 imaqreset;
 %vid = videoinput('winvideo', 1, 'RGB24_960x720');
-vid = videoinput('winvideo', 2, 'RGB24_640x480');
+vid = videoinput('winvideo', 1, 'RGB24_640x480');
 %vid = videoinput('winvideo', 2, 'RGB24_640x480');
 % choose 2 for computers with built in webcams.
 atobj = getselectedsource(vid);
@@ -208,6 +208,8 @@ while true
     del_pic = abs(fend(:) - f_0(:));
     del_pic(del_pic < 10) = 0;
     delta = sum(del_pic);
+    disp('Delta')
+    delta
     aligned_delta = repmat(delta, size(time));
     if isempty(frames)
         frames = f;

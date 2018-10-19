@@ -27,6 +27,7 @@ classdef Manager < handle
 
         abort
         setup
+        stopped
     end
     
     methods(Access = public)
@@ -45,7 +46,7 @@ classdef Manager < handle
             obj.debug = setup.debug;
             
             obj.dataLogger = DataLogger(setup);
-            
+            obj.stopped = true;
             
             %OptitrackOnly, GelSightOnly,GelSightAndTracking, WithArm
             if(obj.expType == ExpTypes.OptitrackOnly)
@@ -74,7 +75,7 @@ classdef Manager < handle
             
                                 obj.simObj = URsim;
                 obj.simObj.Initialize;
-                obj.simObj.FrameT = Tz(350);
+                obj.simObj.FrameT = Tz(355);
     
                 % Hide frames
                 frames = '0123456E';
@@ -101,7 +102,7 @@ classdef Manager < handle
                 
                 obj.simObj = URsim;
                 obj.simObj.Initialize;
-                obj.simObj.FrameT = Tz(350);
+                obj.simObj.FrameT = Tz(450);
     
                 % Hide frames
                 frames = '0123456E';
@@ -163,6 +164,7 @@ classdef Manager < handle
 
         
         function start(obj)
+            obj.stopped = false;
             ptNum=1;
             
             if(isobject(obj.optitrackSensor))
@@ -188,7 +190,7 @@ classdef Manager < handle
                 obj.hsa.start()
                 pause(0.5);
                 obj.hsa.setPos(0.0);
-                pause(1.0);
+                pause(2.0);
             end
 
             if(isobject(obj.simObj))
@@ -255,7 +257,7 @@ classdef Manager < handle
 
                         % Wait for the robot to finish executing the move
                         UR_WaitForMove(obj.hwObj);
-                        pause(1.0);
+                        pause(2.0);
 
                     end
                     disp(['Pt:',num2str(ptNum),' of ',num2str(length(obj.pts))]);
@@ -268,18 +270,21 @@ classdef Manager < handle
                 %run gelsight sensor
                 if(isobject(obj.gelSightSensor))
                     obj.gelSightSensor.getNewData(Pos,Quat);
-%                     if exist('starthsa') && obj.gelSightSensor.stage ~=3
-%                         disp(['STARTHSA: ',num2str(toc(starthsa))])
-%                         if toc(starthsa)>0.1  
-%                             obj.gelSightSensor.stage =2;
-%                             disp('skipping')
-%                             starthsa = tic;
-%                         end
-%                     end
+                    if (exist('starthsa') && ...
+                       (obj.gelSightSensor.stage <2))
+                        disp(['STARTHSA: ',num2str(toc(starthsa))])
+                        if toc(starthsa)>10.0  
+                            obj.gelSightSensor.stage =2;
+                            disp('######Skipping')
+                            starthsa = tic;
+                        end
+                    else
+                        starthsa = tic;
+                    end
                     if obj.gelSightSensor.stage == 0
                         % Looking for rise
                         if isobject(obj.hsa)
-                            obj.hsa.setPos(0.6);
+                            obj.hsa.setPos(1.0);
                         end
 
                     elseif obj.gelSightSensor.stage == 1
@@ -323,6 +328,12 @@ classdef Manager < handle
                     
                     
                 else
+                    if isobject(obj.hsa)
+                        obj.hsa.setPos(1.0);
+                        pause(3);
+                        obj.hsa.setPos(0.0);
+                        pause(3);
+                    end
                     pause(0.01);
                     moveNext= true;
                 end
@@ -336,37 +347,47 @@ classdef Manager < handle
                 end
             end
 
+            if isobject(obj.hsa)
+                obj.hsa.setPos(0.0);
+                pause(3);
+            end
             obj.stop();
             obj.delete();
         end
         
         function stop(obj)
             disp('[Manager] Stopping Manager');
-            % stop optitrack if using it
-            if(isobject(obj.optitrackSensor) )
-                obj.optitrackSensor.stop();
-            end
-            
-            % stop GelSight if using it
-            if(isobject(obj.gelSightSensor) )
-                obj.gelSightSensor.stop();
-            end
-            
-            % stop HSA
-            if(isobject(obj.hsa))
-                %obj.hsa.stop();
-            end
-            
-            if (isobject(obj.simObj) && isobject(obj.hwObj))
-                ptNum = 1;
-                H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
-                % Set simulation toolpose to waypoint pose
-                obj.simObj.ToolPose = H_cur;
-                if(isobject(obj.hwObj))
-                    q = obj.simObj.Joints;
-                    msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
-                    UR_WaitForMove(obj.hwObj);
-                end 
+            if(~obj.stopped)
+                % stop optitrack if using it
+                if(isobject(obj.optitrackSensor) )
+                    obj.optitrackSensor.stop();
+                end
+
+                % stop GelSight if using it
+                if(isobject(obj.gelSightSensor) )
+                    obj.gelSightSensor.stop();
+                end
+
+                % stop HSA
+                if(isobject(obj.hsa))
+                    %obj.hsa.setPos(0);
+                    %pause(1);
+                    obj.hsa.stop();
+                end
+
+                if (isobject(obj.simObj) && isobject(obj.hwObj))
+                    ptNum = 1;
+                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
+                    % Set simulation toolpose to waypoint pose
+                    obj.simObj.ToolPose = H_cur;
+                    if(isobject(obj.hwObj))
+                        q = obj.simObj.Joints;
+                        pause(1.0);
+                        msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
+                        UR_WaitForMove(obj.hwObj);
+                    end 
+                end
+                obj.stopped = true;
             end
         end
         
@@ -381,7 +402,6 @@ classdef Manager < handle
         end
         % Destructor
         function delete(obj)
-            obj.stop()
             if isobject(obj.dataLogger)
                 disp('[Manager] Wrap up Logging');
                 % Save the shape history
@@ -396,16 +416,15 @@ classdef Manager < handle
                 disp('[Manager] Deleting History');
                 delete(obj.dataLogger);
             end
-            
+            if ~obj.stopped
+                obj.stop()
+            end
             if isobject(obj.optitrackSensor)
                 obj.optitrackSensor.delete();
                 disp('[Manager] Deleted Sensor');
             end
             
             if(isobject(obj.hsa))
-                obj.hsa.setPos(0);
-                pause(1);
-                obj.hsa.stop();
                 obj.hsa.delete();
                 disp('[Manager] Deleted HSA');
             end

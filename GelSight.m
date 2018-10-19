@@ -21,6 +21,7 @@ classdef GelSight < handle
         newDataAvailable 
         stage
         start_index
+        starttic
         
     end
     
@@ -107,8 +108,8 @@ classdef GelSight < handle
                 maxdelta(obj);
                 stageinput(obj);
                 obj.newDataAvailable = true;
-                disp('deltas: ')
-                delta
+                disp(['deltas: ',num2str(delta(end))])
+                delta;
                 disp(['num deltas: ',num2str( length(obj.deltas) )])
                 
                 disp(['stage: ',num2str(obj.stage)])

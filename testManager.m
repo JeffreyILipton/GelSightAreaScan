@@ -36,15 +36,17 @@ setup.camNum=1;
 setup.timestep = 0.01;
 setup.debug = false;%true;%
 
-
-setup.HSA_mins = [1300,1450,1360,1300];
-setup.HSA_maxs = [1140,1600,1200,1500];
+setup.HSA_mins = [1207,1579,1261,1447];
+setup.HSA_maxs = [1104.5,1672,1173,1515.5];
+%setup.HSA_mins = [1300,1450,1360,1300];
+%setup.HSA_maxs = [1140,1600,1200,1500];
+%setup.HSA_maxs = [1221,1569.25,1241,1427.25];
 setup.HSA_channels = 0:3;
 setup.HSA_port = 'COM72';
 
 setup.useHardware = useHardware;
 setup.origin = [0.0,200.0,0.0];
-setup.xysize = [250.0,80.0];
+setup.xysize = [250.0,60.0];
 setup.delta = 25.0;
 if exist('hwObj')
     setup.hwObj = hwObj;
