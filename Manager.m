@@ -5,7 +5,7 @@ classdef Manager < handle
     properties(Access=public)
         optitrackSensor  % This object interfaces with the Sensor to collect data
         frameRate        % This is the rate at which the optitrack is querried
-
+        framePeriod
         
         gelSightSensor   % This is the object that interfaces with the GelSight
 
@@ -53,7 +53,7 @@ classdef Manager < handle
                 disp('[Manager] Optitrack Only Experiment');
                 obj.optitrackSensor = OptitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
-                
+                obj.framePeriod = 1/ obj.frameRate; %update framePeriod
 
                 
             elseif(obj.expType == ExpTypes.GelSightOnly)
@@ -64,6 +64,7 @@ classdef Manager < handle
                 disp('[Manager] GelSight With position tracking Experiment ');
                 obj.optitrackSensor = optitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
+                obj.framePeriod = 1/ obj.frameRate; %update framePeriod
                 obj.gelSightSensor = GelSight(setup.camNum);
 
             elseif(obj.expType == ExpTypes.TestHSA)
@@ -151,13 +152,35 @@ classdef Manager < handle
                 disp('[Manager] Full Physical Experiment');
 
                 %obj.environment = Environment();
-                obj.optitrackSensor = optitrackSensor(obj,obj.body);
+                obj.optitrackSensor = OptitrackSensor(obj,obj.body);
                 obj.frameRate = obj.optitrackSensor.frameRate;
+                obj.framePeriod = 1/ obj.frameRate; %update framePeriod
                 obj.gelSightSensor = GelSight(setup.camNum);
                 
-                obj.hsa = HSA(setup.HSA_port,setup.HSA_mins,setup.HSA_maxs);
+                obj.hsa = HSA(setup.HSA_port,setup.HSA_channels,setup.HSA_mins,setup.HSA_maxs);
+            
+                                obj.simObj = URsim;
+                obj.simObj.Initialize;
+                obj.simObj.FrameT = Tz(346.5);
+    
+                % Hide frames
+                frames = '0123456E';
+                for i = 1:numel(frames)
+                    hideTriad(obj.simObj.(sprintf('hFrame%s',frames(i))));
+                end
+
+                if setup.useHardware
+                      if (isobject(setup.hwObj))
+                          obj.hwObj = setup.hwObj;
+                      end
+                end
                 
-                obj.pts = makeWayPoints(setup.origin,setup.xysize,setup.delta);
+                % Create path
+                obj.pts = makeWaypoints(setup.origin,setup.xysize,setup.delta);
+                % Transform coordinates into the workspace of the robot
+                height = 000;
+                outwards = 550;
+                obj.pts = Tz(height)*Rx(pi/2)*Tz(outwards)*obj.pts;
             end     
             
         end
@@ -375,18 +398,18 @@ classdef Manager < handle
                     obj.hsa.stop();
                 end
 
-                if (isobject(obj.simObj) && isobject(obj.hwObj))
-                    ptNum = 1;
-                    H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
-                    % Set simulation toolpose to waypoint pose
-                    obj.simObj.ToolPose = H_cur;
-                    if(isobject(obj.hwObj))
-                        q = obj.simObj.Joints;
-                        pause(1.0);
-                        msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
-                        UR_WaitForMove(obj.hwObj);
-                    end 
-                end
+%                 if (isobject(obj.simObj) && isobject(obj.hwObj))
+%                     ptNum = 1;
+%                     H_cur = Tx(obj.pts(1,ptNum))*Ty(obj.pts(2,ptNum))*Tz(obj.pts(3,ptNum))*Rx(pi)*Rz(5*pi/4);
+%                     % Set simulation toolpose to waypoint pose
+%                     obj.simObj.ToolPose = H_cur;
+%                     if(isobject(obj.hwObj))
+%                         q = obj.simObj.Joints;
+%                         pause(1.0);
+%                         msg(obj.hwObj,sprintf('(%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f)',q,zeros(6,1)));
+%                         UR_WaitForMove(obj.hwObj);
+%                     end 
+%                 end
                 obj.stopped = true;
             end
         end

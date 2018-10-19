@@ -60,6 +60,7 @@ classdef HSA < handle
 		function setPos(obj,pos)
 			for i=1:length(obj.mins)
 				val = obj.posToVal(i,pos);
+                %disp(['Channel: ',num2str(i),': ',num2str(val)])
 				obj.write(obj.channels(i),val);
 			end
 		end

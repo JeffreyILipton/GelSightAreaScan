@@ -49,16 +49,17 @@ classdef DataLogger < handle
         function add(obj, position, quaternion)
             % expand if not enough points
             if (obj.i+1 > obj.N)           
-                obj.positions = cat(3, obj.timestamps,NaN(obj.N,3));
-                obj.quaternions = cat(4, obj.timestamps,NaN(obj.N,4));
+                obj.positions = [obj.positions;NaN(obj.N,3)];
+                obj.quaternions = [obj.quaternions;NaN(obj.N,4)];
                 obj.N = 2*obj.N;
             end 
             
             % Update the count
-            obj.i = mod(obj.i + 1, obj.N);
-            if obj.i == 0
-                obj.i = obj.N;
-            end
+%             obj.i = mod(obj.i + 1, obj.N);
+%             if obj.i == 0
+%                 obj.i = obj.N;
+%             end
+            obj.i = obj.i+1;
             % Add a new measurement
             obj.positions(obj.i, :) = position;
             obj.quaternions(obj.i, :) = quaternion;
@@ -80,7 +81,7 @@ classdef DataLogger < handle
         
         
         function postProcess(obj)
-            obj.framePeriodAvg = mean(obj.framePeriod(1:obj.i));
+            %obj.framePeriodAvg = mean(obj.framePeriod(1:obj.i));
         end
 
                 

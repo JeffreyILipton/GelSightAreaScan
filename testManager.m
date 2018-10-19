@@ -3,6 +3,7 @@ clearvars -EXCEPT hwObj
 close all
 clc
 %%
+%useHardware = false;
 useHardware = true;
 
 if ~exist('hwObj') && useHardware
@@ -28,7 +29,8 @@ setup = struct();
 %setup.expType = ExpTypes.OptitrackOnly;
 %setup.expType = ExpTypes.GelSightOnly;
 %setup.expType = ExpTypes.TestArm;
-setup.expType = ExpTypes.TestHSA;
+%setup.expType = ExpTypes.TestHSA;
+setup.expType = ExpTypes.WithArm;
 setup.expTimeSeconds = 0;%10; %70
 setup.framePeriod = 1;
 setup.offset = [0,0,0];
@@ -36,8 +38,14 @@ setup.camNum=1;
 setup.timestep = 0.01;
 setup.debug = false;%true;%
 
-setup.HSA_mins = [1207,1579,1261,1447];
-setup.HSA_maxs = [1104.5,1672,1173,1515.5];
+% post spray call
+setup.HSA_mins = [1187.5, 1574.25, 1275.75, 1456.75];
+setup.HSA_maxs = [1129,	1603.5,	1241.5,	1500.75] ;
+
+%second cal
+% setup.HSA_mins = [1207,1579,1261,1447];
+% setup.HSA_maxs = [1104.5,1672,1173,1515.5];
+
 %setup.HSA_mins = [1300,1450,1360,1300];
 %setup.HSA_maxs = [1140,1600,1200,1500];
 %setup.HSA_maxs = [1221,1569.25,1241,1427.25];
@@ -45,9 +53,9 @@ setup.HSA_channels = 0:3;
 setup.HSA_port = 'COM72';
 
 setup.useHardware = useHardware;
-setup.origin = [0.0,200.0,0.0];
+setup.origin = [-50.0,200.0,0.0];
 setup.xysize = [250.0,60.0];
-setup.delta = 25.0;
+setup.delta = 20.0;
 if exist('hwObj')
     setup.hwObj = hwObj;
 end
